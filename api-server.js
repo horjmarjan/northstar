@@ -161,5 +161,5 @@ The message should feel personal, not automated. Mention the goal briefly.`,
   }
 });
 
-const PORT = 3001;
-app.listen(PORT, () => console.log(`API server running on http://localhost:${PORT}`));
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, '0.0.0.0', () => console.log(`API server running on port ${PORT}`));
