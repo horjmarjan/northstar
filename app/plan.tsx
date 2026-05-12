@@ -252,7 +252,8 @@ export default function PlanScreen() {
       )}
       {northStar && (
         <View style={styles.goalBanner}>
-          <Text style={styles.goalLabel}>★  {northStar.goal}</Text>
+          <Text style={styles.goalBannerLabel}>★  YOUR NORTH STAR</Text>
+          <Text style={styles.goalBannerText}>{northStar.goal}</Text>
         </View>
       )}
 
@@ -385,11 +386,12 @@ const styles = StyleSheet.create({
   goalBanner: {
     backgroundColor: colors.primaryDim,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.primary + '33',
   },
-  goalLabel: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+  goalBannerLabel: { color: colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: 5, opacity: 0.8 },
+  goalBannerText: { color: colors.text, fontSize: 18, fontWeight: '700', lineHeight: 26 },
 
   statsRow: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, paddingBottom: 0 },
   stat: {

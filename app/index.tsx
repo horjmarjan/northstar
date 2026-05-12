@@ -134,10 +134,12 @@ export default function HomeScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {!northStar ? (
           <View style={styles.onboarding}>
-            <Text style={styles.starLarge}>★</Text>
-            <Text style={styles.headline}>What's your{'\n'}North Star?</Text>
+            <View style={styles.onboardingHero}>
+              <Text style={styles.starLarge}>★</Text>
+            </View>
+            <Text style={styles.headline}>What's your North Star?</Text>
             <Text style={styles.sub}>
-              Set a meaningful goal, get an AI-powered action plan, and bring your people along for the journey.
+              Set a meaningful goal, build an AI-powered action plan, and bring your people along for the journey.
             </Text>
             <Pressable style={styles.primaryBtn} onPress={() => router.push('/setup')}>
               <Text style={styles.primaryBtnText}>Set My North Star</Text>
@@ -147,28 +149,33 @@ export default function HomeScreen() {
           <>
             {/* North Star card */}
             <View style={styles.nsCard}>
+              {/* Top row: label + edit */}
               <View style={styles.nsCardHeader}>
                 <Text style={styles.nsLabel}>★  YOUR NORTH STAR</Text>
-                <View style={styles.nsCardHeaderRight}>
-                  <Pressable style={styles.editBtn} onPress={openEdit}>
-                    <Text style={styles.editBtnText}>✎  Edit</Text>
-                  </Pressable>
-                  <Pressable style={styles.avatarBtn} onPress={pickProfileImage}>
-                    {profileImage ? (
-                      <Image source={{ uri: profileImage }} style={styles.avatarImg} />
-                    ) : (
-                      <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarPlaceholderText}>+</Text>
-                      </View>
-                    )}
-                    <View style={styles.avatarBadge}>
-                      <Text style={styles.avatarBadgeText}>📷</Text>
+                <Pressable style={styles.editBtn} onPress={openEdit}>
+                  <Text style={styles.editBtnText}>✎  Edit</Text>
+                </Pressable>
+              </View>
+
+              {/* Avatar left + goal text right */}
+              <View style={styles.nsGoalRow}>
+                <Pressable style={styles.avatarBtn} onPress={pickProfileImage}>
+                  {profileImage ? (
+                    <Image source={{ uri: profileImage }} style={styles.avatarImg} />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Text style={styles.avatarPlaceholderText}>+</Text>
                     </View>
-                  </Pressable>
+                  )}
+                  <View style={styles.avatarBadge}>
+                    <Text style={styles.avatarBadgeText}>📷</Text>
+                  </View>
+                </Pressable>
+                <View style={styles.nsGoalTextBlock}>
+                  <Text style={styles.nsGoal}>{northStar.goal}</Text>
+                  {!!northStar.why && <Text style={styles.nsWhy}>{northStar.why}</Text>}
                 </View>
               </View>
-              <Text style={styles.nsGoal}>{northStar.goal}</Text>
-              <Text style={styles.nsWhy}>{northStar.why}</Text>
 
               {/* Target date */}
               <Pressable style={styles.dateRow} onPress={() => setShowDatePicker(true)}>
@@ -300,27 +307,40 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   star: { color: colors.primary, fontSize: 40 },
 
-  onboarding: { alignItems: 'center', paddingTop: spacing.xxl },
-  starLarge: { color: colors.primary, fontSize: 80, marginBottom: spacing.lg },
-  headline: { color: colors.text, fontSize: 36, fontWeight: '700', textAlign: 'center', lineHeight: 44, marginBottom: spacing.md },
-  sub: { color: colors.muted, fontSize: 16, textAlign: 'center', lineHeight: 24, marginBottom: spacing.xl, paddingHorizontal: spacing.md },
+  onboarding: { alignItems: 'center', paddingTop: spacing.xxl, paddingHorizontal: spacing.md },
+  onboardingHero: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.primaryDim,
+    borderWidth: 2,
+    borderColor: colors.primary + '44',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  starLarge: { color: colors.primary, fontSize: 52 },
+  headline: { color: colors.text, fontSize: 32, fontWeight: '800', textAlign: 'center', lineHeight: 40, marginBottom: spacing.md },
+  sub: { color: colors.muted, fontSize: 15, textAlign: 'center', lineHeight: 23, marginBottom: spacing.xl },
   primaryBtn: { backgroundColor: colors.primary, paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radius.full },
   primaryBtnText: { color: colors.bg, fontWeight: '700', fontSize: 16 },
 
   nsCard: { backgroundColor: colors.card, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.cardBorder, marginBottom: spacing.lg },
-  nsCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  nsLabel: { color: colors.primary, fontSize: 11, fontWeight: '700', letterSpacing: 2, flex: 1 },
-  nsCardHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  nsCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
+  nsLabel: { color: colors.primary, fontSize: 11, fontWeight: '700', letterSpacing: 2 },
   editBtn: { backgroundColor: colors.primaryDim, borderRadius: radius.full, paddingVertical: 4, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.primary + '44' },
   editBtnText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
-  avatarBtn: { position: 'relative' },
-  avatarImg: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: colors.primary },
-  avatarPlaceholder: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primaryDim, borderWidth: 2, borderColor: colors.primary + '66', alignItems: 'center', justifyContent: 'center' },
-  avatarPlaceholderText: { color: colors.primary, fontSize: 20, fontWeight: '300', lineHeight: 26 },
-  avatarBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: colors.card, borderRadius: radius.full, width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.cardBorder },
-  avatarBadgeText: { fontSize: 10 },
-  nsGoal: { color: colors.text, fontSize: 26, fontWeight: '700', lineHeight: 34, marginBottom: spacing.sm },
-  nsWhy: { color: colors.muted, fontSize: 15, lineHeight: 22, marginBottom: spacing.sm },
+
+  nsGoalRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.sm },
+  avatarBtn: { position: 'relative', flexShrink: 0 },
+  avatarImg: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: colors.primary },
+  avatarPlaceholder: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.primaryDim, borderWidth: 2, borderColor: colors.primary + '55', alignItems: 'center', justifyContent: 'center' },
+  avatarPlaceholderText: { color: colors.primary, fontSize: 26, fontWeight: '300', lineHeight: 32 },
+  avatarBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: colors.card, borderRadius: radius.full, width: 20, height: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.cardBorder },
+  avatarBadgeText: { fontSize: 11 },
+  nsGoalTextBlock: { flex: 1 },
+  nsGoal: { color: colors.text, fontSize: 22, fontWeight: '700', lineHeight: 30, marginBottom: 4 },
+  nsWhy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
   dateIcon: { fontSize: 14 },
   dateText: { color: colors.blue, fontSize: 13, fontWeight: '600' },
