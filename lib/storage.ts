@@ -5,6 +5,7 @@ const KEYS = {
   NORTH_STAR: 'northstar:goal',
   MILESTONES: 'northstar:milestones',
   SUPPORTERS: 'northstar:supporters',
+  PROFILE_IMAGE: 'northstar:profileImage',
 };
 
 async function getItem<T>(key: string): Promise<T | null> {
@@ -47,6 +48,14 @@ export async function getSupporters(): Promise<Supporter[]> {
 
 export async function saveSupporters(supporters: Supporter[]): Promise<void> {
   await setItem(KEYS.SUPPORTERS, supporters);
+}
+
+export async function getProfileImage(): Promise<string | null> {
+  return getItem<string>(KEYS.PROFILE_IMAGE);
+}
+
+export async function saveProfileImage(dataUri: string): Promise<void> {
+  await setItem(KEYS.PROFILE_IMAGE, dataUri);
 }
 
 export async function clearAll(): Promise<void> {

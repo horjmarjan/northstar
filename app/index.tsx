@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -11,10 +12,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { getNorthStar, getMilestones, clearAll, saveNorthStar } from '../lib/storage';
+import { getNorthStar, getMilestones, clearAll, saveNorthStar, getProfileImage, saveProfileImage } from '../lib/storage';
 import { NorthStar, Milestone } from '../lib/types';
 import { colors, spacing, radius } from '../lib/theme';
+import { DatePickerModal } from '../components/DatePickerModal';
 
 function confirmReset(onConfirm: () => void) {
   if (Platform.OS === 'web') {
@@ -40,13 +43,16 @@ export default function HomeScreen() {
   const [editing, setEditing] = useState(false);
   const [goalDraft, setGoalDraft] = useState('');
   const [whyDraft, setWhyDraft] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    const [ns, ms] = await Promise.all([getNorthStar(), getMilestones()]);
+    const [ns, ms, img] = await Promise.all([getNorthStar(), getMilestones(), getProfileImage()]);
     setNorthStar(ns);
     setMilestones(ms);
+    setProfileImage(img);
     setLoading(false);
   };
 
@@ -69,11 +75,43 @@ export default function HomeScreen() {
     setEditing(false);
   };
 
+  const saveTargetDate = async (date: string) => {
+    if (!northStar) return;
+    const updated = { ...northStar, targetDate: date };
+    await saveNorthStar(updated);
+    setNorthStar(updated);
+  };
+
   const handleReset = () => {
     confirmReset(async () => {
       await clearAll();
       router.replace('/setup');
     });
+  };
+
+  const pickProfileImage = async () => {
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow photo library access to set a profile picture.');
+        return;
+      }
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      const dataUri = asset.base64
+        ? `data:image/jpeg;base64,${asset.base64}`
+        : asset.uri;
+      setProfileImage(dataUri);
+      await saveProfileImage(dataUri);
+    }
   };
 
   if (loading) {
@@ -87,7 +125,9 @@ export default function HomeScreen() {
   const allTasks = milestones.flatMap((m) => m.tasks);
   const doneTasks = allTasks.filter((t) => t.completed).length;
   const pct = allTasks.length > 0 ? Math.round((doneTasks / allTasks.length) * 100) : 0;
-  const activeMilestone = milestones.find((m) => !m.completed);
+  const lockedIn = northStar?.lockedInMilestoneId
+    ? milestones.find((m) => m.id === northStar.lockedInMilestoneId)
+    : null;
 
   return (
     <>
@@ -105,15 +145,39 @@ export default function HomeScreen() {
           </View>
         ) : (
           <>
+            {/* North Star card */}
             <View style={styles.nsCard}>
               <View style={styles.nsCardHeader}>
                 <Text style={styles.nsLabel}>★  YOUR NORTH STAR</Text>
-                <Pressable style={styles.editBtn} onPress={openEdit}>
-                  <Text style={styles.editBtnText}>✎  Edit</Text>
-                </Pressable>
+                <View style={styles.nsCardHeaderRight}>
+                  <Pressable style={styles.editBtn} onPress={openEdit}>
+                    <Text style={styles.editBtnText}>✎  Edit</Text>
+                  </Pressable>
+                  <Pressable style={styles.avatarBtn} onPress={pickProfileImage}>
+                    {profileImage ? (
+                      <Image source={{ uri: profileImage }} style={styles.avatarImg} />
+                    ) : (
+                      <View style={styles.avatarPlaceholder}>
+                        <Text style={styles.avatarPlaceholderText}>+</Text>
+                      </View>
+                    )}
+                    <View style={styles.avatarBadge}>
+                      <Text style={styles.avatarBadgeText}>📷</Text>
+                    </View>
+                  </Pressable>
+                </View>
               </View>
               <Text style={styles.nsGoal}>{northStar.goal}</Text>
               <Text style={styles.nsWhy}>{northStar.why}</Text>
+
+              {/* Target date */}
+              <Pressable style={styles.dateRow} onPress={() => setShowDatePicker(true)}>
+                <Text style={styles.dateIcon}>🎯</Text>
+                <Text style={styles.dateText}>
+                  {northStar.targetDate ? `Target: ${northStar.targetDate}` : 'Set a target date'}
+                </Text>
+              </Pressable>
+
               <View style={styles.progressRow}>
                 <View style={styles.progressBar}>
                   <View style={[styles.progressFill, { flex: pct }]} />
@@ -129,16 +193,32 @@ export default function HomeScreen() {
               </Pressable>
             </View>
 
-            {activeMilestone && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>CURRENT MILESTONE</Text>
-                <View style={styles.milestonePreview}>
-                  <Text style={styles.milestoneTitle}>{activeMilestone.title}</Text>
-                  <Text style={styles.milestoneDesc}>{activeMilestone.description}</Text>
+            {/* Lock In stage */}
+            {lockedIn ? (
+              <View style={styles.lockInCard}>
+                <Text style={styles.lockInLabel}>🔒  LOCKED IN</Text>
+                <Text style={styles.lockInTitle}>{lockedIn.title}</Text>
+                {lockedIn.description ? (
+                  <Text style={styles.lockInDesc}>{lockedIn.description}</Text>
+                ) : null}
+                <View style={styles.lockInRow}>
+                  <Text style={styles.lockInMeta}>
+                    {lockedIn.tasks.filter(t => t.completed).length} of {lockedIn.tasks.length} tasks done
+                  </Text>
+                  <Pressable onPress={() => router.push('/plan')}>
+                    <Text style={styles.lockInView}>View in plan →</Text>
+                  </Pressable>
                 </View>
               </View>
+            ) : (
+              <Pressable style={styles.lockInEmpty} onPress={() => router.push('/plan')}>
+                <Text style={styles.lockInEmptyIcon}>🔓</Text>
+                <Text style={styles.lockInEmptyText}>Lock in your next step</Text>
+                <Text style={styles.lockInEmptySub}>Go to the Action Plan to focus on one mini goal</Text>
+              </Pressable>
             )}
 
+            {/* Action buttons */}
             <View style={styles.actions}>
               <Pressable style={styles.actionBtn} onPress={() => router.push('/plan')}>
                 <Text style={styles.actionIcon}>📋</Text>
@@ -156,6 +236,14 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Date picker */}
+      <DatePickerModal
+        visible={showDatePicker}
+        current={northStar?.targetDate}
+        onSelect={saveTargetDate}
+        onClose={() => setShowDatePicker(false)}
+      />
 
       {/* Edit North Star modal */}
       <Modal visible={editing} transparent animationType="slide" onRequestClose={() => setEditing(false)}>
@@ -222,11 +310,21 @@ const styles = StyleSheet.create({
 
   nsCard: { backgroundColor: colors.card, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.cardBorder, marginBottom: spacing.lg },
   nsCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  nsLabel: { color: colors.primary, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
+  nsLabel: { color: colors.primary, fontSize: 11, fontWeight: '700', letterSpacing: 2, flex: 1 },
+  nsCardHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   editBtn: { backgroundColor: colors.primaryDim, borderRadius: radius.full, paddingVertical: 4, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.primary + '44' },
   editBtnText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
-  nsGoal: { color: colors.text, fontSize: 22, fontWeight: '700', lineHeight: 30, marginBottom: spacing.xs },
-  nsWhy: { color: colors.muted, fontSize: 14, lineHeight: 20, marginBottom: spacing.md },
+  avatarBtn: { position: 'relative' },
+  avatarImg: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: colors.primary },
+  avatarPlaceholder: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primaryDim, borderWidth: 2, borderColor: colors.primary + '66', alignItems: 'center', justifyContent: 'center' },
+  avatarPlaceholderText: { color: colors.primary, fontSize: 20, fontWeight: '300', lineHeight: 26 },
+  avatarBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: colors.card, borderRadius: radius.full, width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.cardBorder },
+  avatarBadgeText: { fontSize: 10 },
+  nsGoal: { color: colors.text, fontSize: 26, fontWeight: '700', lineHeight: 34, marginBottom: spacing.sm },
+  nsWhy: { color: colors.muted, fontSize: 15, lineHeight: 22, marginBottom: spacing.sm },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
+  dateIcon: { fontSize: 14 },
+  dateText: { color: colors.blue, fontSize: 13, fontWeight: '600' },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
   progressBar: { flex: 1, height: 6, backgroundColor: colors.cardBorder, borderRadius: radius.full, overflow: 'hidden', flexDirection: 'row' },
   progressFill: { height: 6, backgroundColor: colors.primary, borderRadius: radius.full },
@@ -235,11 +333,34 @@ const styles = StyleSheet.create({
   cardDivider: { height: 1, backgroundColor: colors.cardBorder, marginVertical: spacing.md },
   resetText: { color: colors.danger, fontSize: 13, textAlign: 'center' },
 
-  section: { marginBottom: spacing.lg },
-  sectionLabel: { color: colors.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: spacing.sm },
-  milestonePreview: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.cardBorder },
-  milestoneTitle: { color: colors.text, fontWeight: '600', fontSize: 16, marginBottom: 4 },
-  milestoneDesc: { color: colors.muted, fontSize: 13, lineHeight: 18 },
+  // Lock In card
+  lockInCard: {
+    backgroundColor: colors.text,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  lockInLabel: { color: colors.primary, fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: spacing.sm },
+  lockInTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 28, marginBottom: spacing.xs },
+  lockInDesc: { color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 20, marginBottom: spacing.sm },
+  lockInRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm },
+  lockInMeta: { color: 'rgba(255,255,255,0.5)', fontSize: 12 },
+  lockInView: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+
+  lockInEmpty: {
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.cardBorder,
+    borderStyle: 'dashed',
+    gap: spacing.xs,
+  },
+  lockInEmptyIcon: { fontSize: 28, marginBottom: spacing.xs },
+  lockInEmptyText: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  lockInEmptySub: { color: colors.muted, fontSize: 13, textAlign: 'center' },
 
   actions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: { flex: 1, backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.md, alignItems: 'center', borderWidth: 1, borderColor: colors.cardBorder },
