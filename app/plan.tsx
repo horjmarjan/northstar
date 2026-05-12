@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -12,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
-import { getMilestones, saveMilestones, getNorthStar, saveNorthStar } from '../lib/storage';
+import { getMilestones, saveMilestones, getNorthStar, saveNorthStar, getProfileImage } from '../lib/storage';
 import { Milestone, NorthStar } from '../lib/types';
 import { MilestoneCard } from '../components/MilestoneCard';
 import { colors, radius, spacing } from '../lib/theme';
@@ -21,6 +22,7 @@ import { API } from '../lib/apiUrl';
 export default function PlanScreen() {
   const [northStar, setNorthStar] = useState<NorthStar | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newStepTitle, setNewStepTitle] = useState('');
   const [addingStep, setAddingStep] = useState(false);
@@ -28,9 +30,10 @@ export default function PlanScreen() {
   useEffect(() => { load(); }, []);
 
   const load = async () => {
-    const [ns, ms] = await Promise.all([getNorthStar(), getMilestones()]);
+    const [ns, ms, img] = await Promise.all([getNorthStar(), getMilestones(), getProfileImage()]);
     setNorthStar(ns);
     setMilestones(ms);
+    setProfileImage(img);
   };
 
   const save = async (updated: Milestone[]) => {
@@ -245,16 +248,26 @@ export default function PlanScreen() {
 
   return (
     <View style={styles.container}>
-      {Platform.OS === 'web' && (
-        <Pressable style={styles.webBack} onPress={() => router.replace('/')}>
-          <Text style={styles.webBackText}>← North Star</Text>
-        </Pressable>
-      )}
       {northStar && (
-        <View style={styles.goalBanner}>
-          <Text style={styles.goalBannerLabel}>★  YOUR NORTH STAR</Text>
-          <Text style={styles.goalBannerText}>{northStar.goal}</Text>
-        </View>
+        <Pressable style={styles.goalBanner} onPress={() => router.replace('/')}>
+          <View style={styles.goalBannerLeft}>
+            {profileImage ? (
+              <Image source={{ uri: profileImage }} style={styles.goalBannerAvatar} />
+            ) : (
+              <View style={styles.goalBannerAvatarPlaceholder}>
+                <Text style={styles.goalBannerAvatarIcon}>★</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.goalBannerCenter}>
+            <Text style={styles.goalBannerLabel}>★  YOUR NORTH STAR</Text>
+            <Text style={styles.goalBannerText} numberOfLines={2}>{northStar.goal}</Text>
+          </View>
+          <View style={styles.goalBannerRight}>
+            <Text style={styles.goalBannerBack}>⌂</Text>
+            <Text style={styles.goalBannerBackLabel}>Home</Text>
+          </View>
+        </Pressable>
       )}
 
       <View style={styles.statsRow}>
@@ -376,8 +389,6 @@ export default function PlanScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  webBack: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
-  webBackText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   emptyText: { color: colors.muted, fontSize: 16 },
   emptyBtn: { backgroundColor: colors.primary, borderRadius: radius.full, paddingVertical: 12, paddingHorizontal: 28 },
@@ -385,13 +396,33 @@ const styles = StyleSheet.create({
 
   goalBanner: {
     backgroundColor: colors.primaryDim,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.primary + '33',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  goalBannerLabel: { color: colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: 5, opacity: 0.8 },
-  goalBannerText: { color: colors.text, fontSize: 18, fontWeight: '700', lineHeight: 26 },
+  goalBannerLeft: { flexShrink: 0 },
+  goalBannerAvatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: colors.primary },
+  goalBannerAvatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primaryDim,
+    borderWidth: 2,
+    borderColor: colors.primary + '55',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goalBannerAvatarIcon: { color: colors.primary, fontSize: 20, fontWeight: '700' },
+  goalBannerCenter: { flex: 1 },
+  goalBannerLabel: { color: colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: 4, opacity: 0.8 },
+  goalBannerText: { color: colors.text, fontSize: 16, fontWeight: '700', lineHeight: 22 },
+  goalBannerRight: { alignItems: 'center', paddingLeft: spacing.xs },
+  goalBannerBack: { color: colors.primary, fontSize: 20 },
+  goalBannerBackLabel: { color: colors.primary, fontSize: 10, fontWeight: '700' },
 
   statsRow: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, paddingBottom: 0 },
   stat: {
