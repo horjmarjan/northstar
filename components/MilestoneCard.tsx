@@ -26,6 +26,7 @@ interface Props {
   onPromoteSubGoal: (milestoneId: string, subGoalId: string) => Promise<void>;
   onLockIn: (milestoneId: string) => void;
   isLockedIn: boolean;
+  hasActiveLockIn: boolean;   // some OTHER step is locked in
   northStarGoal: string;
 }
 
@@ -34,8 +35,10 @@ export function MilestoneCard({
   onMoveUp, onMoveDown,
   onToggleTask, onEditMilestone, onEditTask,
   onDeleteMilestone, onDeleteTask, onMoveTask, onAddTask,
-  onSetDate, onAddSubGoal, onPromoteSubGoal, onLockIn, isLockedIn, northStarGoal,
+  onSetDate, onAddSubGoal, onPromoteSubGoal, onLockIn, isLockedIn, hasActiveLockIn, northStarGoal,
 }: Props) {
+  // This card is blocked: something else is locked in
+  const isOnDeck = hasActiveLockIn && !isLockedIn;
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(milestone.title);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -79,7 +82,24 @@ export function MilestoneCard({
   };
 
   return (
-    <View style={[styles.card, milestone.completed && styles.cardDone]}>
+    <View style={[
+      styles.card,
+      milestone.completed && styles.cardDone,
+      isLockedIn && styles.cardLockedIn,
+      isOnDeck && styles.cardOnDeck,
+    ]}>
+      {/* Locked-in banner */}
+      {isLockedIn && (
+        <View style={styles.lockedInBanner}>
+          <Text style={styles.lockedInBannerText}>🔒  CURRENT FOCUS</Text>
+        </View>
+      )}
+      {isOnDeck && (
+        <View style={styles.onDeckBanner}>
+          <Text style={styles.onDeckBannerText}>⏳  on deck</Text>
+        </View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.priorityCol}>
@@ -108,16 +128,7 @@ export function MilestoneCard({
         </View>
 
         <View style={styles.rightCol}>
-          <Text style={styles.pct}>{pct}%</Text>
-          <Pressable
-            style={[styles.lockInBtn, isLockedIn && styles.lockInBtnActive]}
-            onPress={() => onLockIn(milestone.id)}
-            hitSlop={6}
-          >
-            <Text style={[styles.lockInBtnText, isLockedIn && styles.lockInBtnTextActive]}>
-              {isLockedIn ? '🔒' : '🔓'}
-            </Text>
-          </Pressable>
+          <Text style={[styles.pct, isLockedIn && styles.pctLockedIn]}>{pct}%</Text>
           <Pressable onPress={() => onDeleteMilestone(milestone.id)} style={styles.iconBtn}>
             <Text style={styles.deleteIcon}>🗑</Text>
           </Pressable>
@@ -199,6 +210,7 @@ export function MilestoneCard({
       {showSubGoals && (
         <View style={styles.subGoalsList}>
           {(milestone.subGoals ?? []).map((sg) => (
+
             <Pressable
               key={sg.id}
               style={styles.subGoalRow}
@@ -269,6 +281,22 @@ export function MilestoneCard({
           )}
         </View>
       )}
+
+      {/* Lock In footer */}
+      {isLockedIn ? (
+        <View style={styles.lockInFooter}>
+          <View style={styles.lockInFooterLeft}>
+            <Text style={styles.lockInFooterMsg}>You're locked in. Stay focused. 💪</Text>
+          </View>
+          <Pressable onPress={() => onLockIn(milestone.id)} style={styles.unlockBtn}>
+            <Text style={styles.unlockBtnText}>Unlock</Text>
+          </Pressable>
+        </View>
+      ) : !hasActiveLockIn ? (
+        <Pressable style={styles.lockInTrigger} onPress={() => onLockIn(milestone.id)}>
+          <Text style={styles.lockInTriggerText}>🔒  Lock in on this step</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -283,6 +311,38 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   cardDone: { borderColor: colors.success, opacity: 0.75 },
+  cardLockedIn: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  cardOnDeck: { opacity: 0.4 },
+
+  lockedInBanner: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+    paddingVertical: 5,
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  lockedInBannerText: { color: colors.bg, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
+
+  onDeckBanner: {
+    backgroundColor: colors.inputBg,
+    borderRadius: radius.sm,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.sm,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  onDeckBannerText: { color: colors.muted, fontSize: 10, fontWeight: '600', letterSpacing: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   priorityCol: { alignItems: 'center', gap: 2 },
   arrowBtn: { padding: 3 },
@@ -297,10 +357,7 @@ const styles = StyleSheet.create({
   dateLabel: { color: colors.blue, fontSize: 12 },
   rightCol: { alignItems: 'center', gap: spacing.xs },
   pct: { color: colors.primary, fontSize: 12, fontWeight: '600' },
-  lockInBtn: { padding: 4, borderRadius: radius.full, backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.cardBorder },
-  lockInBtnActive: { backgroundColor: colors.primaryDim, borderColor: colors.primary + '66' },
-  lockInBtnText: { fontSize: 13 },
-  lockInBtnTextActive: { fontSize: 13 },
+  pctLockedIn: { color: colors.primary, fontWeight: '800' },
   iconBtn: { padding: 4 },
   deleteIcon: { fontSize: 14 },
   progressBar: { height: 3, backgroundColor: colors.cardBorder, borderRadius: radius.full, marginBottom: spacing.sm, overflow: 'hidden', flexDirection: 'row' },
@@ -340,4 +397,35 @@ const styles = StyleSheet.create({
   sgBtnDisabled: { opacity: 0.4 },
   sgBtnPrimaryText: { color: colors.primary, fontSize: 11, fontWeight: '700' },
   sgBtnText: { color: colors.muted, fontSize: 11 },
+
+  // Lock In footer
+  lockInTrigger: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder,
+    alignItems: 'center',
+  },
+  lockInTriggerText: { color: colors.muted, fontSize: 13, fontWeight: '600' },
+
+  lockInFooter: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.primary + '44',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  lockInFooterLeft: { flex: 1 },
+  lockInFooterMsg: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+  unlockBtn: {
+    paddingVertical: 5,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.primary + '55',
+    backgroundColor: colors.primaryDim,
+  },
+  unlockBtnText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
 });

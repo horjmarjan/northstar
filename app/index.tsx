@@ -193,10 +193,10 @@ export default function HomeScreen() {
               </Pressable>
             </View>
 
-            {/* Lock In stage */}
+            {/* Lock In / Current Focus */}
             {lockedIn ? (
-              <View style={styles.lockInCard}>
-                <Text style={styles.lockInLabel}>🔒  LOCKED IN</Text>
+              <Pressable style={styles.lockInCard} onPress={() => router.push('/plan')}>
+                <Text style={styles.lockInLabel}>🔒  CURRENT FOCUS</Text>
                 <Text style={styles.lockInTitle}>{lockedIn.title}</Text>
                 {lockedIn.description ? (
                   <Text style={styles.lockInDesc}>{lockedIn.description}</Text>
@@ -204,17 +204,16 @@ export default function HomeScreen() {
                 <View style={styles.lockInRow}>
                   <Text style={styles.lockInMeta}>
                     {lockedIn.tasks.filter(t => t.completed).length} of {lockedIn.tasks.length} tasks done
+                    {milestones.length > 1 ? `  ·  ${milestones.length - 1} step${milestones.length > 2 ? 's' : ''} on hold` : ''}
                   </Text>
-                  <Pressable onPress={() => router.push('/plan')}>
-                    <Text style={styles.lockInView}>View in plan →</Text>
-                  </Pressable>
+                  <Text style={styles.lockInView}>Go to plan →</Text>
                 </View>
-              </View>
+              </Pressable>
             ) : (
               <Pressable style={styles.lockInEmpty} onPress={() => router.push('/plan')}>
-                <Text style={styles.lockInEmptyIcon}>🔓</Text>
-                <Text style={styles.lockInEmptyText}>Lock in your next step</Text>
-                <Text style={styles.lockInEmptySub}>Go to the Action Plan to focus on one mini goal</Text>
+                <Text style={styles.lockInEmptyIcon}>🔒</Text>
+                <Text style={styles.lockInEmptyText}>Lock in on a step</Text>
+                <Text style={styles.lockInEmptySub}>Focus on one thing at a time — go to the Action Plan to lock in</Text>
               </Pressable>
             )}
 

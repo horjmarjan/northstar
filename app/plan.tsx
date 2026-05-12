@@ -278,6 +278,28 @@ export default function PlanScreen() {
         </Pressable>
       </View>
 
+      {/* Focus mode banner */}
+      {northStar?.lockedInMilestoneId && (() => {
+        const locked = milestones.find(m => m.id === northStar.lockedInMilestoneId);
+        if (!locked) return null;
+        const done = locked.tasks.filter(t => t.completed).length;
+        const total = locked.tasks.length;
+        return (
+          <View style={styles.focusBanner}>
+            <View style={styles.focusBannerLeft}>
+              <Text style={styles.focusBannerLabel}>🔒  FOCUS MODE</Text>
+              <Text style={styles.focusBannerTitle} numberOfLines={1}>{locked.title}</Text>
+              {total > 0 && (
+                <Text style={styles.focusBannerMeta}>{done} of {total} tasks done</Text>
+              )}
+            </View>
+            <Pressable style={styles.focusBannerUnlock} onPress={() => lockInMilestone(locked.id)}>
+              <Text style={styles.focusBannerUnlockText}>Unlock</Text>
+            </Pressable>
+          </View>
+        );
+      })()}
+
       <ScrollView contentContainerStyle={styles.listContent}>
         {milestones.map((m, i) => (
           <MilestoneCard
@@ -299,6 +321,7 @@ export default function PlanScreen() {
             onPromoteSubGoal={promoteSubGoal}
             onLockIn={lockInMilestone}
             isLockedIn={northStar?.lockedInMilestoneId === m.id}
+            hasActiveLockIn={!!northStar?.lockedInMilestoneId}
             northStarGoal={northStar?.goal ?? ''}
           />
         ))}
@@ -380,6 +403,29 @@ const styles = StyleSheet.create({
   },
   statNum: { color: colors.primary, fontSize: 20, fontWeight: '700' },
   statLabel: { color: colors.muted, fontSize: 10, marginTop: 1 },
+
+  focusBanner: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  focusBannerLeft: { flex: 1 },
+  focusBannerLabel: { color: colors.bg, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 3, opacity: 0.85 },
+  focusBannerTitle: { color: colors.bg, fontSize: 15, fontWeight: '700' },
+  focusBannerMeta: { color: colors.bg, fontSize: 12, opacity: 0.75, marginTop: 2 },
+  focusBannerUnlock: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: radius.full,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  focusBannerUnlockText: { color: colors.bg, fontSize: 12, fontWeight: '700' },
 
   hintRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   hint: { flex: 1, color: colors.muted, fontSize: 11 },
