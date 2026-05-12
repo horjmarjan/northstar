@@ -161,15 +161,18 @@ export default function HomeScreen() {
               <View style={styles.nsGoalRow}>
                 <Pressable style={styles.avatarBtn} onPress={pickProfileImage}>
                   {profileImage ? (
-                    <Image source={{ uri: profileImage }} style={styles.avatarImg} />
+                    <>
+                      <Image source={{ uri: profileImage }} style={styles.avatarImg} />
+                      <View style={styles.avatarBadge}>
+                        <Text style={styles.avatarBadgeText}>📷</Text>
+                      </View>
+                    </>
                   ) : (
                     <View style={styles.avatarPlaceholder}>
-                      <Text style={styles.avatarPlaceholderText}>+</Text>
+                      <Text style={styles.avatarPlaceholderIcon}>👤</Text>
+                      <Text style={styles.avatarPlaceholderLabel}>Add{'\n'}Photo</Text>
                     </View>
                   )}
-                  <View style={styles.avatarBadge}>
-                    <Text style={styles.avatarBadgeText}>📷</Text>
-                  </View>
                 </Pressable>
                 <View style={styles.nsGoalTextBlock}>
                   <Text style={styles.nsGoal}>{northStar.goal}</Text>
@@ -332,10 +335,22 @@ const styles = StyleSheet.create({
   editBtnText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
 
   nsGoalRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.sm },
-  avatarBtn: { position: 'relative', flexShrink: 0 },
-  avatarImg: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: colors.primary },
-  avatarPlaceholder: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.primaryDim, borderWidth: 2, borderColor: colors.primary + '55', alignItems: 'center', justifyContent: 'center' },
-  avatarPlaceholderText: { color: colors.primary, fontSize: 26, fontWeight: '300', lineHeight: 32 },
+  avatarBtn: { flexShrink: 0 },
+  avatarImg: { width: 64, height: 64, borderRadius: 32, borderWidth: 2.5, borderColor: colors.primary },
+  avatarPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.inputBg,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  avatarPlaceholderIcon: { fontSize: 20, lineHeight: 24 },
+  avatarPlaceholderLabel: { color: colors.primary, fontSize: 9, fontWeight: '700', textAlign: 'center', lineHeight: 12 },
   avatarBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: colors.card, borderRadius: radius.full, width: 20, height: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.cardBorder },
   avatarBadgeText: { fontSize: 11 },
   nsGoalTextBlock: { flex: 1 },
