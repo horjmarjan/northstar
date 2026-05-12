@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Milestone } from '../lib/types';
 import { colors, radius, spacing } from '../lib/theme';
@@ -24,6 +24,8 @@ interface Props {
   onSetDate: (milestoneId: string, date: string) => void;
   onAddSubGoal: (milestoneId: string, title: string, generate: boolean) => Promise<void>;
   onPromoteSubGoal: (milestoneId: string, subGoalId: string) => Promise<void>;
+  onLockIn: (milestoneId: string) => void;
+  isLockedIn: boolean;
   northStarGoal: string;
 }
 
@@ -32,7 +34,7 @@ export function MilestoneCard({
   onMoveUp, onMoveDown,
   onToggleTask, onEditMilestone, onEditTask,
   onDeleteMilestone, onDeleteTask, onMoveTask, onAddTask,
-  onSetDate, onAddSubGoal, onPromoteSubGoal, northStarGoal,
+  onSetDate, onAddSubGoal, onPromoteSubGoal, onLockIn, isLockedIn, northStarGoal,
 }: Props) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(milestone.title);
@@ -107,6 +109,15 @@ export function MilestoneCard({
 
         <View style={styles.rightCol}>
           <Text style={styles.pct}>{pct}%</Text>
+          <Pressable
+            style={[styles.lockInBtn, isLockedIn && styles.lockInBtnActive]}
+            onPress={() => onLockIn(milestone.id)}
+            hitSlop={6}
+          >
+            <Text style={[styles.lockInBtnText, isLockedIn && styles.lockInBtnTextActive]}>
+              {isLockedIn ? '🔒' : '🔓'}
+            </Text>
+          </Pressable>
           <Pressable onPress={() => onDeleteMilestone(milestone.id)} style={styles.iconBtn}>
             <Text style={styles.deleteIcon}>🗑</Text>
           </Pressable>
@@ -286,6 +297,10 @@ const styles = StyleSheet.create({
   dateLabel: { color: colors.blue, fontSize: 12 },
   rightCol: { alignItems: 'center', gap: spacing.xs },
   pct: { color: colors.primary, fontSize: 12, fontWeight: '600' },
+  lockInBtn: { padding: 4, borderRadius: radius.full, backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.cardBorder },
+  lockInBtnActive: { backgroundColor: colors.primaryDim, borderColor: colors.primary + '66' },
+  lockInBtnText: { fontSize: 13 },
+  lockInBtnTextActive: { fontSize: 13 },
   iconBtn: { padding: 4 },
   deleteIcon: { fontSize: 14 },
   progressBar: { height: 3, backgroundColor: colors.cardBorder, borderRadius: radius.full, marginBottom: spacing.sm, overflow: 'hidden', flexDirection: 'row' },

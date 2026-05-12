@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
-import { getMilestones, saveMilestones, getNorthStar } from '../lib/storage';
+import { getMilestones, saveMilestones, getNorthStar, saveNorthStar } from '../lib/storage';
 import { Milestone, NorthStar } from '../lib/types';
 import { MilestoneCard } from '../components/MilestoneCard';
 import { colors, radius, spacing } from '../lib/theme';
@@ -173,6 +173,15 @@ export default function PlanScreen() {
     await save(milestones.map((m) => m.id === milestoneId ? { ...m, targetDate: date } : m));
   };
 
+  const lockInMilestone = async (milestoneId: string) => {
+    if (!northStar) return;
+    // Toggle: if already locked in, unlock; otherwise lock in this milestone
+    const newLockedId = northStar.lockedInMilestoneId === milestoneId ? undefined : milestoneId;
+    const updated = { ...northStar, lockedInMilestoneId: newLockedId };
+    await saveNorthStar(updated);
+    setNorthStar(updated);
+  };
+
   const addStep = async () => {
     if (!newStepTitle.trim()) return;
     setAddingStep(true);
@@ -288,6 +297,8 @@ export default function PlanScreen() {
             onSetDate={setDate}
             onAddSubGoal={addSubGoal}
             onPromoteSubGoal={promoteSubGoal}
+            onLockIn={lockInMilestone}
+            isLockedIn={northStar?.lockedInMilestoneId === m.id}
             northStarGoal={northStar?.goal ?? ''}
           />
         ))}
