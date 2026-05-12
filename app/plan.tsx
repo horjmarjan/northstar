@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   goalBannerBack: { color: colors.primary, fontSize: 20 },
   goalBannerBackLabel: { color: colors.primary, fontSize: 10, fontWeight: '700' },
 
-  statsRow: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, paddingBottom: 0 },
+  statsRow: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, paddingTop: spacing.md, paddingBottom: 0 },
   stat: {
     flex: 1,
     backgroundColor: colors.card,
@@ -439,7 +439,8 @@ const styles = StyleSheet.create({
 
   focusBanner: {
     marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
     backgroundColor: colors.primary,
     borderRadius: radius.lg,
     padding: spacing.md,
