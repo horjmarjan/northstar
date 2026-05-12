@@ -5,7 +5,6 @@
   },
   "deploy": {
     "startCommand": "node api-server.js",
-    "healthcheckPath": "/api/storage/test",
     "restartPolicyType": "ON_FAILURE"
   }
 }
