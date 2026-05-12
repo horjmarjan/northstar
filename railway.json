@@ -1,0 +1,7 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "deploy": {
+    "startCommand": "node api-server.js",
+    "healthcheckPath": "/api/storage/test"
+  }
+}
