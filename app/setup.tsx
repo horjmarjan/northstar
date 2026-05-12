@@ -96,12 +96,14 @@ export default function SetupScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
     >
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         <Text style={styles.starIcon}>★</Text>
 
@@ -206,7 +208,7 @@ export default function SetupScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, paddingTop: spacing.xl, paddingBottom: 120 },
   starIcon: { color: colors.primary, fontSize: 40, marginBottom: spacing.lg },
 
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: spacing.xs },
