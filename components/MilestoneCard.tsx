@@ -294,7 +294,7 @@ export function MilestoneCard({
         </View>
       ) : !hasActiveLockIn ? (
         <Pressable style={styles.lockInTrigger} onPress={() => onLockIn(milestone.id)}>
-          <Text style={styles.lockInTriggerText}>🔒  Lock in on this step</Text>
+          <Text style={styles.lockInTriggerText}>🔒  Lock In on your next mini-goal</Text>
         </Pressable>
       ) : null}
     </View>

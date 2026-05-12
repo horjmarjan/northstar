@@ -212,7 +212,7 @@ export default function HomeScreen() {
             ) : (
               <Pressable style={styles.lockInEmpty} onPress={() => router.push('/plan')}>
                 <Text style={styles.lockInEmptyIcon}>🔒</Text>
-                <Text style={styles.lockInEmptyText}>Lock in on a step</Text>
+                <Text style={styles.lockInEmptyText}>Lock In on your next mini-goal</Text>
                 <Text style={styles.lockInEmptySub}>Focus on one thing at a time — go to the Action Plan to lock in</Text>
               </Pressable>
             )}
