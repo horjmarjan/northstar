@@ -72,7 +72,7 @@ export function DatePickerModal({ visible, current, onSelect, onClose }: Props) 
           display="inline"
           minimumDate={new Date()}
           onChange={(_, date) => { if (date) setPickerDate(date); }}
-          themeVariant="dark"
+          themeVariant="light"
           accentColor={colors.primary}
           style={styles.picker}
         />

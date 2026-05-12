@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   addRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   addInput: { flex: 1, backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder, color: colors.text, fontSize: 14, padding: spacing.sm },
   addConfirm: { backgroundColor: colors.blue, borderRadius: radius.md, paddingHorizontal: spacing.md, justifyContent: 'center' },
-  addConfirmText: { color: '#fff', fontWeight: '700' },
+  addConfirmText: { color: colors.bg, fontWeight: '700' },
   addBtn: { marginBottom: spacing.xl },
   addBtnText: { color: colors.blue, fontWeight: '600', fontSize: 14 },
 

@@ -1,15 +1,16 @@
 export const colors = {
-  bg: '#0A0E1A',
-  card: '#131929',
-  cardBorder: '#1E2A44',
-  primary: '#F5C842',
-  primaryDim: '#3D3210',
-  blue: '#7B8CDE',
-  text: '#F0F4FF',
-  muted: '#6B7A99',
-  success: '#4ADE80',
-  danger: '#F87171',
-  inputBg: '#0F1628',
+  bg: '#FAF8F5',           // warm off-white
+  card: '#FFFFFF',          // clean white cards
+  cardBorder: '#EDE9E0',   // soft warm gray border
+  primary: '#D4873A',      // warm amber — the North Star
+  primaryDim: '#FEF3E4',   // pale amber tint
+  blue: '#6B8FD4',         // soft periwinkle — sub-goals & links
+  teal: '#4AABA8',         // soft teal — accents
+  text: '#2D2A3E',         // deep charcoal (not pure black)
+  muted: '#9590A8',        // soft purple-gray
+  success: '#52B788',      // sage green
+  danger: '#E06B6B',       // soft coral red
+  inputBg: '#F5F2ED',      // warm light input background
 };
 
 export const spacing = {
