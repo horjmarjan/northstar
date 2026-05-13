@@ -206,7 +206,7 @@ export default function HomeScreen() {
             {/* Lock In / Current Focus */}
             {lockedIn ? (
               <Pressable style={styles.lockInCard} onPress={() => router.push('/plan')}>
-                <Text style={styles.lockInLabel}>🔒  CURRENT FOCUS</Text>
+                <Text style={styles.lockInLabel}>🎯  FOCUS MODE</Text>
                 <Text style={styles.lockInTitle}>{lockedIn.title}</Text>
                 {lockedIn.description ? (
                   <Text style={styles.lockInDesc}>{lockedIn.description}</Text>
@@ -221,9 +221,9 @@ export default function HomeScreen() {
               </Pressable>
             ) : (
               <Pressable style={styles.lockInEmpty} onPress={() => router.push('/plan')}>
-                <Text style={styles.lockInEmptyIcon}>🔒</Text>
-                <Text style={styles.lockInEmptyText}>Lock In on your next mini-goal</Text>
-                <Text style={styles.lockInEmptySub}>Focus on one thing at a time — go to the Action Plan to lock in</Text>
+                <Text style={styles.lockInEmptyIcon}>🎯</Text>
+                <Text style={styles.lockInEmptyText}>Enter Focus Mode</Text>
+                <Text style={styles.lockInEmptySub}>Zero in on one mini-goal at a time — go to the Action Plan to set your focus</Text>
               </Pressable>
             )}
 

@@ -91,7 +91,7 @@ export function MilestoneCard({
       {/* Locked-in banner */}
       {isLockedIn && (
         <View style={styles.lockedInBanner}>
-          <Text style={styles.lockedInBannerText}>🔒  CURRENT FOCUS</Text>
+          <Text style={styles.lockedInBannerText}>🎯  FOCUS MODE</Text>
         </View>
       )}
       {isOnDeck && (
@@ -286,15 +286,15 @@ export function MilestoneCard({
       {isLockedIn ? (
         <View style={styles.lockInFooter}>
           <View style={styles.lockInFooterLeft}>
-            <Text style={styles.lockInFooterMsg}>You're locked in. Stay focused. 💪</Text>
+            <Text style={styles.lockInFooterMsg}>Focus Mode is on. Stay on it. 💪</Text>
           </View>
           <Pressable onPress={() => onLockIn(milestone.id)} style={styles.unlockBtn}>
-            <Text style={styles.unlockBtnText}>Unlock</Text>
+            <Text style={styles.unlockBtnText}>End Focus</Text>
           </Pressable>
         </View>
       ) : !hasActiveLockIn ? (
         <Pressable style={styles.lockInTrigger} onPress={() => onLockIn(milestone.id)}>
-          <Text style={styles.lockInTriggerText}>🔒  Lock In on your next mini-goal</Text>
+          <Text style={styles.lockInTriggerText}>🎯  Focus on this mini-goal</Text>
         </Pressable>
       ) : null}
     </View>

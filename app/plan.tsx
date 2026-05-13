@@ -301,14 +301,14 @@ export default function PlanScreen() {
         return (
           <View style={styles.focusBanner}>
             <View style={styles.focusBannerLeft}>
-              <Text style={styles.focusBannerLabel}>🔒  FOCUS MODE</Text>
+              <Text style={styles.focusBannerLabel}>🎯  FOCUS MODE</Text>
               <Text style={styles.focusBannerTitle} numberOfLines={1}>{locked.title}</Text>
               {total > 0 && (
                 <Text style={styles.focusBannerMeta}>{done} of {total} tasks done</Text>
               )}
             </View>
             <Pressable style={styles.focusBannerUnlock} onPress={() => lockInMilestone(locked.id)}>
-              <Text style={styles.focusBannerUnlockText}>Unlock</Text>
+              <Text style={styles.focusBannerUnlockText}>End Focus</Text>
             </Pressable>
           </View>
         );
