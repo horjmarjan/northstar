@@ -4,6 +4,7 @@ export interface NorthStar {
   why: string;
   createdAt: string;
   targetDate?: string;
+  lockedInMilestoneId?: string;
 }
 
 export interface Task {
