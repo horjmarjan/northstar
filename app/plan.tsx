@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  goalBannerLogoIcon: { width: 30, height: 30 },
+  goalBannerLogoIcon: { width: 40, height: 40 },
   goalBannerCenter: { flex: 1 },
   goalBannerLabel: { color: colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: 4, opacity: 0.8 },
   goalBannerText: { color: colors.text, fontSize: 16, fontWeight: '700', lineHeight: 22 },

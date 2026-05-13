@@ -218,7 +218,7 @@ export default function SetupScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingTop: spacing.xl, paddingBottom: 120 },
-  logoIcon: { width: 56, height: 56, marginBottom: spacing.lg },
+  logoIcon: { width: 160, height: 160, marginBottom: spacing.lg },
 
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: spacing.xs },
   sectionSub: { color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: spacing.md },
