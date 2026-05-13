@@ -12,11 +12,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { getMilestones, saveMilestones, getNorthStar, saveNorthStar, getProfileImage } from '../lib/storage';
 import { Milestone, NorthStar } from '../lib/types';
 import { MilestoneCard } from '../components/MilestoneCard';
-import { colors, radius, spacing } from '../lib/theme';
+import { colors, gradients, radius, spacing } from '../lib/theme';
 import { API } from '../lib/apiUrl';
 
 export default function PlanScreen() {
@@ -299,7 +300,12 @@ export default function PlanScreen() {
         const done = locked.tasks.filter(t => t.completed).length;
         const total = locked.tasks.length;
         return (
-          <View style={styles.focusBanner}>
+          <LinearGradient
+            colors={gradients.focus}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.focusBanner}
+          >
             <View style={styles.focusBannerLeft}>
               <Text style={styles.focusBannerLabel}>🎯  FOCUS MODE</Text>
               <Text style={styles.focusBannerTitle} numberOfLines={1}>{locked.title}</Text>
@@ -310,7 +316,7 @@ export default function PlanScreen() {
             <Pressable style={styles.focusBannerUnlock} onPress={() => lockInMilestone(locked.id)}>
               <Text style={styles.focusBannerUnlockText}>End Focus</Text>
             </Pressable>
-          </View>
+          </LinearGradient>
         );
       })()}
 
@@ -441,7 +447,6 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
-    backgroundColor: colors.primary,
     borderRadius: radius.lg,
     padding: spacing.md,
     flexDirection: 'row',

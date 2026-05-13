@@ -13,10 +13,11 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { getNorthStar, getMilestones, clearAll, saveNorthStar, getProfileImage, saveProfileImage } from '../lib/storage';
 import { NorthStar, Milestone } from '../lib/types';
-import { colors, spacing, radius } from '../lib/theme';
+import { colors, gradients, spacing, radius } from '../lib/theme';
 import { DatePickerModal } from '../components/DatePickerModal';
 
 function confirmReset(onConfirm: () => void) {
@@ -141,8 +142,15 @@ export default function HomeScreen() {
             <Text style={styles.sub}>
               Set a meaningful goal, build an AI-powered action plan, and bring your people along for the journey.
             </Text>
-            <Pressable style={styles.primaryBtn} onPress={() => router.push('/setup')}>
-              <Text style={styles.primaryBtnText}>Set My North Star</Text>
+            <Pressable style={styles.primaryBtnWrapper} onPress={() => router.push('/setup')}>
+              <LinearGradient
+                colors={gradients.primary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.primaryBtn}
+              >
+                <Text style={styles.primaryBtnText}>Set My North Star</Text>
+              </LinearGradient>
             </Pressable>
           </View>
         ) : (
@@ -205,7 +213,13 @@ export default function HomeScreen() {
 
             {/* Lock In / Current Focus */}
             {lockedIn ? (
-              <Pressable style={styles.lockInCard} onPress={() => router.push('/plan')}>
+              <Pressable style={styles.lockInCardWrapper} onPress={() => router.push('/plan')}>
+              <LinearGradient
+                colors={gradients.focus}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.lockInCard}
+              >
                 <Text style={styles.lockInLabel}>🎯  FOCUS MODE</Text>
                 <Text style={styles.lockInTitle}>{lockedIn.title}</Text>
                 {lockedIn.description ? (
@@ -218,6 +232,7 @@ export default function HomeScreen() {
                   </Text>
                   <Text style={styles.lockInView}>Go to plan →</Text>
                 </View>
+              </LinearGradient>
               </Pressable>
             ) : (
               <Pressable style={styles.lockInEmpty} onPress={() => router.push('/plan')}>
@@ -325,7 +340,8 @@ const styles = StyleSheet.create({
   starLarge: { color: colors.primary, fontSize: 52 },
   headline: { color: colors.text, fontSize: 32, fontWeight: '800', textAlign: 'center', lineHeight: 40, marginBottom: spacing.md },
   sub: { color: colors.muted, fontSize: 15, textAlign: 'center', lineHeight: 23, marginBottom: spacing.xl },
-  primaryBtn: { backgroundColor: colors.primary, paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radius.full },
+  primaryBtnWrapper: { borderRadius: radius.full, overflow: 'hidden' },
+  primaryBtn: { paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radius.full, alignItems: 'center' },
   primaryBtnText: { color: colors.bg, fontWeight: '700', fontSize: 16 },
 
   nsCard: { backgroundColor: colors.card, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.cardBorder, marginBottom: spacing.lg },
@@ -367,12 +383,11 @@ const styles = StyleSheet.create({
   cardDivider: { height: 1, backgroundColor: colors.cardBorder, marginVertical: spacing.md },
   resetText: { color: colors.danger, fontSize: 13, textAlign: 'center' },
 
-  // Lock In card
+  // Focus Mode card
+  lockInCardWrapper: { borderRadius: radius.xl, marginBottom: spacing.lg, overflow: 'hidden' },
   lockInCard: {
-    backgroundColor: colors.text,
     borderRadius: radius.xl,
     padding: spacing.lg,
-    marginBottom: spacing.lg,
   },
   lockInLabel: { color: colors.primary, fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: spacing.sm },
   lockInTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 28, marginBottom: spacing.xs },

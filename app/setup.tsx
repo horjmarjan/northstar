@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ActivityIndicator,
   Alert,
@@ -14,7 +15,7 @@ import {
 import { router } from 'expo-router';
 import { saveNorthStar, saveMilestones } from '../lib/storage';
 import { NorthStar } from '../lib/types';
-import { colors, radius, spacing } from '../lib/theme';
+import { colors, gradients, radius, spacing } from '../lib/theme';
 import { API } from '../lib/apiUrl';
 
 export default function SetupScreen() {
@@ -188,18 +189,25 @@ export default function SetupScreen() {
 
         {/* Generate */}
         <Pressable
-          style={[styles.btn, !canGenerate && styles.btnDisabled]}
+          style={[styles.btnWrapper, !canGenerate && styles.btnDisabled]}
           onPress={handleGenerate}
           disabled={!canGenerate}
         >
-          {loading ? (
-            <View style={styles.btnInner}>
-              <ActivityIndicator color={colors.bg} size="small" />
-              <Text style={styles.btnText}>Building your plan…</Text>
-            </View>
-          ) : (
-            <Text style={styles.btnText}>Build My Action Plan  ✦</Text>
-          )}
+          <LinearGradient
+            colors={gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.btn}
+          >
+            {loading ? (
+              <View style={styles.btnInner}>
+                <ActivityIndicator color={colors.bg} size="small" />
+                <Text style={styles.btnText}>Building your plan…</Text>
+              </View>
+            ) : (
+              <Text style={styles.btnText}>Build My Action Plan  ✦</Text>
+            )}
+          </LinearGradient>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -272,12 +280,15 @@ const styles = StyleSheet.create({
   },
   aiNoticeText: { color: colors.primary, fontSize: 13 },
 
+  btnWrapper: {
+    borderRadius: radius.full,
+    marginTop: spacing.sm,
+    overflow: 'hidden',
+  },
   btn: {
-    backgroundColor: colors.primary,
     borderRadius: radius.full,
     paddingVertical: spacing.md + 2,
     alignItems: 'center',
-    marginTop: spacing.sm,
   },
   btnDisabled: { opacity: 0.4 },
   btnInner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
