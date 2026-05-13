@@ -256,12 +256,12 @@ export default function PlanScreen() {
               <Image source={{ uri: profileImage }} style={styles.goalBannerAvatar} />
             ) : (
               <View style={styles.goalBannerAvatarPlaceholder}>
-                <Text style={styles.goalBannerAvatarIcon}>★</Text>
+                <Image source={require('../assets/north_star_logo.png')} style={styles.goalBannerLogoIcon} />
               </View>
             )}
           </View>
           <View style={styles.goalBannerCenter}>
-            <Text style={styles.goalBannerLabel}>★  YOUR NORTH STAR</Text>
+            <Text style={styles.goalBannerLabel}>YOUR NORTH STAR</Text>
             <Text style={styles.goalBannerText} numberOfLines={2}>{northStar.goal}</Text>
           </View>
           <View style={styles.goalBannerRight}>
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  goalBannerAvatarIcon: { color: colors.primary, fontSize: 20, fontWeight: '700' },
+  goalBannerLogoIcon: { width: 30, height: 30 },
   goalBannerCenter: { flex: 1 },
   goalBannerLabel: { color: colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: 4, opacity: 0.8 },
   goalBannerText: { color: colors.text, fontSize: 16, fontWeight: '700', lineHeight: 22 },

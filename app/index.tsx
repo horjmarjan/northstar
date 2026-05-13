@@ -118,7 +118,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <Text style={styles.star}>★</Text>
+        <Image source={require('../assets/north_star_logo.png')} style={styles.logoSpin} />
       </View>
     );
   }
@@ -136,7 +136,7 @@ export default function HomeScreen() {
         {!northStar ? (
           <View style={styles.onboarding}>
             <View style={styles.onboardingHero}>
-              <Text style={styles.starLarge}>★</Text>
+              <Image source={require('../assets/north_star_logo.png')} style={styles.logoHero} />
             </View>
             <Text style={styles.headline}>What's your North Star?</Text>
             <Text style={styles.sub}>
@@ -159,7 +159,7 @@ export default function HomeScreen() {
             <View style={styles.nsCard}>
               {/* Top row: label + edit */}
               <View style={styles.nsCardHeader}>
-                <Text style={styles.nsLabel}>★  YOUR NORTH STAR</Text>
+                <Text style={styles.nsLabel}>YOUR NORTH STAR</Text>
                 <Pressable style={styles.editBtn} onPress={openEdit}>
                   <Text style={styles.editBtnText}>✎  Edit</Text>
                 </Pressable>
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingTop: spacing.xxl + spacing.xl },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  star: { color: colors.primary, fontSize: 40 },
+  logoSpin: { width: 64, height: 64, opacity: 0.7 },
 
   onboarding: { alignItems: 'center', paddingTop: spacing.xxl, paddingHorizontal: spacing.md },
   onboardingHero: {
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.lg,
   },
-  starLarge: { color: colors.primary, fontSize: 52 },
+  logoHero: { width: 72, height: 72 },
   headline: { color: colors.text, fontSize: 32, fontWeight: '800', textAlign: 'center', lineHeight: 40, marginBottom: spacing.md },
   sub: { color: colors.muted, fontSize: 15, textAlign: 'center', lineHeight: 23, marginBottom: spacing.xl },
   primaryBtnWrapper: { borderRadius: radius.full, overflow: 'hidden' },

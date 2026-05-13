@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -106,7 +107,7 @@ export default function SetupScreen() {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-        <Text style={styles.starIcon}>★</Text>
+        <Image source={require('../assets/north_star_logo.png')} style={styles.logoIcon} />
 
         {/* North Star */}
         <Text style={styles.sectionTitle}>Your North Star</Text>
@@ -217,7 +218,7 @@ export default function SetupScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingTop: spacing.xl, paddingBottom: 120 },
-  starIcon: { color: colors.primary, fontSize: 40, marginBottom: spacing.lg },
+  logoIcon: { width: 56, height: 56, marginBottom: spacing.lg },
 
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: spacing.xs },
   sectionSub: { color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: spacing.md },
