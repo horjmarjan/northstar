@@ -7,6 +7,13 @@ export interface NorthStar {
   lockedInMilestoneId?: string;
 }
 
+export interface Goal {
+  id: string;
+  northStarId: string;
+  title: string;
+  order: number;
+}
+
 export interface Task {
   id: string;
   milestoneId: string;
@@ -26,8 +33,10 @@ export interface SubGoal {
 export interface Milestone {
   id: string;
   northStarId: string;
+  goalId?: string;
   title: string;
   description: string;
+  notes?: string;
   order: number;
   completed: boolean;
   tasks: Task[];

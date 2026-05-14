@@ -27,6 +27,7 @@ interface Props {
   onLockIn: (milestoneId: string) => void;
   isLockedIn: boolean;
   hasActiveLockIn: boolean;   // some OTHER step is locked in
+  onExpand: (milestoneId: string) => void;
   northStarGoal: string;
 }
 
@@ -35,7 +36,7 @@ export function MilestoneCard({
   onMoveUp, onMoveDown,
   onToggleTask, onEditMilestone, onEditTask,
   onDeleteMilestone, onDeleteTask, onMoveTask, onAddTask,
-  onSetDate, onAddSubGoal, onPromoteSubGoal, onLockIn, isLockedIn, hasActiveLockIn, northStarGoal,
+  onSetDate, onAddSubGoal, onPromoteSubGoal, onLockIn, isLockedIn, hasActiveLockIn, onExpand, northStarGoal,
 }: Props) {
   // This card is blocked: something else is locked in
   const isOnDeck = hasActiveLockIn && !isLockedIn;
@@ -129,6 +130,9 @@ export function MilestoneCard({
 
         <View style={styles.rightCol}>
           <Text style={[styles.pct, isLockedIn && styles.pctLockedIn]}>{pct}%</Text>
+          <Pressable onPress={() => onExpand(milestone.id)} style={styles.iconBtn}>
+            <Text style={styles.expandIcon}>⤢</Text>
+          </Pressable>
           <Pressable onPress={() => onDeleteMilestone(milestone.id)} style={styles.iconBtn}>
             <Text style={styles.deleteIcon}>🗑</Text>
           </Pressable>
@@ -359,6 +363,7 @@ const styles = StyleSheet.create({
   pct: { color: colors.primary, fontSize: 12, fontWeight: '600' },
   pctLockedIn: { color: colors.primary, fontWeight: '800' },
   iconBtn: { padding: 4 },
+  expandIcon: { fontSize: 16, color: colors.muted },
   deleteIcon: { fontSize: 14 },
   progressBar: { height: 3, backgroundColor: colors.cardBorder, borderRadius: radius.full, marginBottom: spacing.sm, overflow: 'hidden', flexDirection: 'row' },
   progressFill: { height: 3, backgroundColor: colors.primary, borderRadius: radius.full },

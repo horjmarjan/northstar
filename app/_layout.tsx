@@ -20,6 +20,7 @@ export default function RootLayout() {
         <Stack.Screen name="plan" options={{ title: 'Action Plan', headerBackTitle: 'Back' }} />
         <Stack.Screen name="supporters" options={{ title: 'Your Support Circle', headerBackTitle: 'Back' }} />
         <Stack.Screen name="timeline" options={{ title: 'Timeline', headerBackTitle: 'Back' }} />
+        <Stack.Screen name="milestone" options={{ headerShown: false }} />
       </Stack>
     </>
   );

@@ -1,4 +1,4 @@
-import { NorthStar, Milestone, Supporter } from './types';
+import { NorthStar, Milestone, Supporter, Goal } from './types';
 import { API } from './apiUrl';
 
 const KEYS = {
@@ -6,6 +6,7 @@ const KEYS = {
   MILESTONES: 'northstar:milestones',
   SUPPORTERS: 'northstar:supporters',
   PROFILE_IMAGE: 'northstar:profileImage',
+  GOALS: 'northstar:goals',
 };
 
 async function getItem<T>(key: string): Promise<T | null> {
@@ -40,6 +41,14 @@ export async function getMilestones(): Promise<Milestone[]> {
 
 export async function saveMilestones(milestones: Milestone[]): Promise<void> {
   await setItem(KEYS.MILESTONES, milestones);
+}
+
+export async function getGoals(): Promise<Goal[]> {
+  return (await getItem<Goal[]>(KEYS.GOALS)) ?? [];
+}
+
+export async function saveGoals(goals: Goal[]): Promise<void> {
+  await setItem(KEYS.GOALS, goals);
 }
 
 export async function getSupporters(): Promise<Supporter[]> {
