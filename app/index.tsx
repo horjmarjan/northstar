@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -12,10 +13,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { getNorthStar, getMilestones, clearAll, saveNorthStar, getProfileImage, saveProfileImage } from '../lib/storage';
+import { getNorthStar, getMilestones, clearAll, saveNorthStar, getGoalImage, saveGoalImage } from '../lib/storage';
+import { isLoggedIn } from '../lib/auth';
 import { NorthStar, Milestone } from '../lib/types';
 import { colors, gradients, spacing, radius } from '../lib/theme';
 import { DatePickerModal } from '../components/DatePickerModal';
@@ -37,6 +38,53 @@ function confirmReset(onConfirm: () => void) {
   }
 }
 
+// ─── Bullseye with arrow icon ────────────────────────────────────────────────
+function BullseyeArrow({ size = 44, color = '#C9884A' }: { size?: number; color?: string }) {
+  const r = size / 2;
+  const totalWidth = size + size * 0.58;
+  return (
+    <View style={{ width: totalWidth, height: size, justifyContent: 'center' }}>
+      {/* Arrow shaft */}
+      <View style={{
+        position: 'absolute', left: 0, top: r - 1,
+        height: 2, width: size * 0.52, backgroundColor: color,
+      }} />
+      {/* Arrow head */}
+      <View style={{
+        position: 'absolute', left: size * 0.47, top: r - 5,
+        width: 0, height: 0,
+        borderTopWidth: 5, borderBottomWidth: 5, borderLeftWidth: 9,
+        borderTopColor: 'transparent', borderBottomColor: 'transparent',
+        borderLeftColor: color,
+      }} />
+      {/* Concentric rings */}
+      <View style={{ position: 'absolute', right: 0, width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ position: 'absolute', width: size,        height: size,        borderRadius: r,          borderWidth: 2, borderColor: color, opacity: 0.28 }} />
+        <View style={{ position: 'absolute', width: size * 0.67, height: size * 0.67, borderRadius: size * 0.335, borderWidth: 2, borderColor: color, opacity: 0.58 }} />
+        <View style={{ position: 'absolute', width: size * 0.37, height: size * 0.37, borderRadius: size * 0.185, borderWidth: 2, borderColor: color }} />
+        <View style={{ width: size * 0.13, height: size * 0.13, borderRadius: size * 0.065, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Keyword extractor for goal images ───────────────────────────────────────
+const STOP_WORDS = new Set([
+  'a','an','the','to','for','and','or','of','in','on','at','is','my','i',
+  'want','be','get','have','make','do','with','from','into','by','up','as',
+  'it','its','that','this','will','can','about','after','become','new','own',
+  'more','one','start','build','grow','learn','achieve','reach','create','run',
+]);
+
+function extractImageKeywords(goal: string): string {
+  const words = goal.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+  const keywords = words.filter(w => w.length > 3 && !STOP_WORDS.has(w));
+  return (keywords.length ? keywords.slice(0, 3) : ['goal', 'inspiration']).join(',');
+}
+
+// Show splash once per app session — mark shown on first mount, not animation end
+let _splashShown = false;
+
 export default function HomeScreen() {
   const [northStar, setNorthStar] = useState<NorthStar | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
@@ -45,21 +93,82 @@ export default function HomeScreen() {
   const [goalDraft, setGoalDraft] = useState('');
   const [whyDraft, setWhyDraft] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [goalImage, setGoalImage] = useState<string | null>(null);
+  // Capture whether to show splash before marking it done
+  const [splashVisible, setSplashVisible] = useState(() => {
+    const show = !_splashShown;
+    _splashShown = true;   // mark immediately so remounts never replay it
+    return show;
+  });
+  const splashOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => { loadData(); }, []);
 
+  // Route based on auth + data state once loading is done
+  useEffect(() => {
+    if (loading) return;
+    if (!isLoggedIn()) {
+      router.replace('/login');
+    } else if (!northStar) {
+      router.replace('/onboarding');
+    }
+  }, [loading, northStar]);
+
   const loadData = async () => {
-    const [ns, ms, img] = await Promise.all([getNorthStar(), getMilestones(), getProfileImage()]);
+    // Skip the fetch entirely if not logged in — redirect handled by routing effect
+    if (!isLoggedIn()) {
+      setLoading(false);
+      return;
+    }
+    const [ns, ms, cachedImg] = await Promise.all([getNorthStar(), getMilestones(), getGoalImage()]);
     setNorthStar(ns);
     setMilestones(ms);
-    setProfileImage(img);
+    if (cachedImg) {
+      setGoalImage(cachedImg);
+    } else if (ns?.goal) {
+      fetchGoalImage(ns.goal);
+    }
     setLoading(false);
+  };
+
+  const fetchGoalImage = async (goal: string) => {
+    try {
+      const keywords = extractImageKeywords(goal);
+      const url = `https://source.unsplash.com/featured/400x400/?${encodeURIComponent(keywords)}`;
+      // Follow the redirect to get a stable CDN URL
+      const res = await fetch(url, { redirect: 'follow' });
+      const stableUrl = res.url && res.url !== url ? res.url : url;
+      setGoalImage(stableUrl);
+      await saveGoalImage(stableUrl);
+    } catch {
+      // Silently fail — image just won't show
+    }
   };
 
   useEffect(() => {
     const interval = setInterval(loadData, 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!splashVisible) return;
+    // Fade in
+    Animated.timing(splashOpacity, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start(() => {
+      // Hold, then fade out
+      setTimeout(() => {
+        Animated.timing(splashOpacity, {
+          toValue: 0,
+          duration: 700,
+          useNativeDriver: true,
+        }).start(() => {
+          setSplashVisible(false);
+        });
+      }, 2800);
+    });
   }, []);
 
   const openEdit = () => {
@@ -74,6 +183,12 @@ export default function HomeScreen() {
     await saveNorthStar(updated);
     setNorthStar(updated);
     setEditing(false);
+    // Refresh goal image when goal text changes
+    if (goalDraft.trim() !== northStar.goal) {
+      setGoalImage(null);
+      await saveGoalImage('');
+      fetchGoalImage(goalDraft.trim());
+    }
   };
 
   const saveTargetDate = async (date: string) => {
@@ -90,30 +205,6 @@ export default function HomeScreen() {
     });
   };
 
-  const pickProfileImage = async () => {
-    if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow photo library access to set a profile picture.');
-        return;
-      }
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-      base64: true,
-    });
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      const dataUri = asset.base64
-        ? `data:image/jpeg;base64,${asset.base64}`
-        : asset.uri;
-      setProfileImage(dataUri);
-      await saveProfileImage(dataUri);
-    }
-  };
 
   if (loading) {
     return (
@@ -133,27 +224,7 @@ export default function HomeScreen() {
   return (
     <>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {!northStar ? (
-          <View style={styles.onboarding}>
-            <View style={styles.onboardingHero}>
-              <Image source={require('../assets/north_star_logo.png')} style={styles.logoHero} />
-            </View>
-            <Text style={styles.headline}>What's your North Star?</Text>
-            <Text style={styles.sub}>
-              Set a meaningful goal, build an AI-powered action plan, and bring your people along for the journey.
-            </Text>
-            <Pressable style={styles.primaryBtnWrapper} onPress={() => router.push('/setup')}>
-              <LinearGradient
-                colors={gradients.primary}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.primaryBtn}
-              >
-                <Text style={styles.primaryBtnText}>Set My North Star</Text>
-              </LinearGradient>
-            </Pressable>
-          </View>
-        ) : (
+        {northStar ? (
           <>
             {/* North Star card */}
             <View style={styles.nsCard}>
@@ -165,23 +236,21 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
 
-              {/* Avatar left + goal text right */}
+              {/* Goal vision image left + goal text right */}
               <View style={styles.nsGoalRow}>
-                <Pressable style={styles.avatarBtn} onPress={pickProfileImage}>
-                  {profileImage ? (
-                    <>
-                      <Image source={{ uri: profileImage }} style={styles.avatarImg} />
-                      <View style={styles.avatarBadge}>
-                        <Text style={styles.avatarBadgeText}>📷</Text>
-                      </View>
-                    </>
+                <View style={styles.goalImageContainer}>
+                  {goalImage ? (
+                    <Image
+                      source={{ uri: goalImage }}
+                      style={styles.goalImage}
+                      resizeMode="cover"
+                    />
                   ) : (
-                    <View style={styles.avatarPlaceholder}>
-                      <Text style={styles.avatarPlaceholderIcon}>👤</Text>
-                      <Text style={styles.avatarPlaceholderLabel}>Add{'\n'}Photo</Text>
+                    <View style={styles.goalImagePlaceholder}>
+                      <Text style={styles.goalImagePlaceholderText}>✦</Text>
                     </View>
                   )}
-                </Pressable>
+                </View>
                 <View style={styles.nsGoalTextBlock}>
                   <Text style={styles.nsGoal}>{northStar.goal}</Text>
                   {!!northStar.why && <Text style={styles.nsWhy}>{northStar.why}</Text>}
@@ -190,7 +259,7 @@ export default function HomeScreen() {
 
               {/* Target date */}
               <Pressable style={styles.dateRow} onPress={() => setShowDatePicker(true)}>
-                <Text style={styles.dateIcon}>🎯</Text>
+                <Text style={styles.dateIcon}>◎</Text>
                 <Text style={styles.dateText}>
                   {northStar.targetDate ? `Target: ${northStar.targetDate}` : 'Set a target date'}
                 </Text>
@@ -220,7 +289,7 @@ export default function HomeScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.lockInCard}
               >
-                <Text style={styles.lockInLabel}>🎯  FOCUS MODE</Text>
+                <Text style={styles.lockInLabel}>◎  FOCUS MODE</Text>
                 <Text style={styles.lockInTitle}>{lockedIn.title}</Text>
                 {lockedIn.description ? (
                   <Text style={styles.lockInDesc}>{lockedIn.description}</Text>
@@ -236,7 +305,7 @@ export default function HomeScreen() {
               </Pressable>
             ) : (
               <Pressable style={styles.lockInEmpty} onPress={() => router.push('/plan')}>
-                <Text style={styles.lockInEmptyIcon}>🎯</Text>
+                <Text style={styles.lockInEmptyIcon}>◎</Text>
                 <Text style={styles.lockInEmptyText}>Enter Focus Mode</Text>
                 <Text style={styles.lockInEmptySub}>Zero in on one mini-goal at a time — go to the Action Plan to set your focus</Text>
               </Pressable>
@@ -253,12 +322,12 @@ export default function HomeScreen() {
                 <Text style={styles.actionLabel}>Supporters</Text>
               </Pressable>
               <Pressable style={styles.actionBtn} onPress={() => router.push('/timeline')}>
-                <Text style={styles.actionIcon}>📅</Text>
+                <Text style={[styles.actionIcon, styles.actionIconTeal]}>◷</Text>
                 <Text style={styles.actionLabel}>Timeline</Text>
               </Pressable>
             </View>
           </>
-        )}
+        ) : null}
       </ScrollView>
 
       {/* Date picker */}
@@ -315,6 +384,21 @@ export default function HomeScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Splash overlay */}
+      {splashVisible && (
+        <Animated.View style={[styles.splash, { opacity: splashOpacity }]} pointerEvents="none">
+          <Image
+            source={require('../assets/north_star_logo.png')}
+            style={styles.splashLogo}
+            resizeMode="contain"
+          />
+          <View style={styles.splashQuoteBlock}>
+            <BullseyeArrow size={42} color="#C9884A" />
+            <Text style={styles.splashQuote}>A goal without a plan is just a dream.</Text>
+          </View>
+        </Animated.View>
+      )}
     </>
   );
 }
@@ -347,30 +431,16 @@ const styles = StyleSheet.create({
   editBtnText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
 
   nsGoalRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.sm },
-  avatarBtn: { flexShrink: 0 },
-  avatarImg: { width: 64, height: 64, borderRadius: 32, borderWidth: 2.5, borderColor: colors.primary },
-  avatarPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.inputBg,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 1,
-  },
-  avatarPlaceholderIcon: { fontSize: 20, lineHeight: 24 },
-  avatarPlaceholderLabel: { color: colors.primary, fontSize: 9, fontWeight: '700', textAlign: 'center', lineHeight: 12 },
-  avatarBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: colors.card, borderRadius: radius.full, width: 20, height: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.cardBorder },
-  avatarBadgeText: { fontSize: 11 },
+  goalImageContainer: { flexShrink: 0, width: 72, height: 72, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: colors.cardBorder },
+  goalImage: { width: 72, height: 72 },
+  goalImagePlaceholder: { width: 72, height: 72, backgroundColor: colors.primaryDim, alignItems: 'center', justifyContent: 'center' },
+  goalImagePlaceholderText: { color: colors.primary, fontSize: 28 },
   nsGoalTextBlock: { flex: 1 },
   nsGoal: { color: colors.text, fontSize: 22, fontWeight: '700', lineHeight: 30, marginBottom: 4 },
   nsWhy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
-  dateIcon: { fontSize: 14 },
-  dateText: { color: colors.blue, fontSize: 13, fontWeight: '600' },
+  dateIcon: { fontSize: 14, color: colors.primary },
+  dateText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
   progressBar: { flex: 1, height: 6, backgroundColor: colors.cardBorder, borderRadius: radius.full, overflow: 'hidden', flexDirection: 'row' },
   progressFill: { height: 6, backgroundColor: colors.primary, borderRadius: radius.full },
@@ -385,7 +455,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.lg,
   },
-  lockInLabel: { color: colors.primary, fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: spacing.sm },
+  lockInLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: spacing.sm },
   lockInTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 28, marginBottom: spacing.xs },
   lockInDesc: { color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 20, marginBottom: spacing.sm },
   lockInRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm },
@@ -403,7 +473,8 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     gap: spacing.xs,
   },
-  lockInEmptyIcon: { fontSize: 28, marginBottom: spacing.xs },
+  lockInEmptyIcon: { fontSize: 28, color: colors.primary, marginBottom: spacing.xs },
+  actionIconTeal: { color: colors.primary },
   lockInEmptyText: { color: colors.text, fontSize: 16, fontWeight: '700' },
   lockInEmptySub: { color: colors.muted, fontSize: 13, textAlign: 'center' },
 
@@ -425,4 +496,32 @@ const styles = StyleSheet.create({
   saveBtn: { flex: 2, backgroundColor: colors.primary, borderRadius: radius.full, paddingVertical: spacing.md, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.4 },
   saveText: { color: colors.bg, fontWeight: '700', fontSize: 15 },
+
+  // Splash
+  splash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: '18%',
+    zIndex: 100,
+    gap: spacing.lg,
+  },
+  splashLogo: {
+    width: 140,
+    height: 140,
+  },
+  splashQuoteBlock: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
+  },
+  splashQuote: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '600',
+    lineHeight: 26,
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
 });

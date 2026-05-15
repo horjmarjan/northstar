@@ -35,6 +35,7 @@ yarn-error.*
 
 # server data
 server-data.json
+auth-data.json
 
 # typescript
 *.tsbuildinfo

@@ -92,7 +92,7 @@ export function MilestoneCard({
       {/* Locked-in banner */}
       {isLockedIn && (
         <View style={styles.lockedInBanner}>
-          <Text style={styles.lockedInBannerText}>🎯  FOCUS MODE</Text>
+          <Text style={styles.lockedInBannerText}>◎  FOCUS MODE</Text>
         </View>
       )}
       {isOnDeck && (
@@ -123,7 +123,7 @@ export function MilestoneCard({
           )}
           <Pressable onPress={() => setShowDatePicker(true)}>
             <Text style={styles.dateLabel}>
-              {milestone.targetDate ? `📅  ${milestone.targetDate}` : '+ Set target date'}
+              {milestone.targetDate ? `◷  ${milestone.targetDate}` : '+ Set target date'}
             </Text>
           </Pressable>
         </View>
@@ -298,7 +298,7 @@ export function MilestoneCard({
         </View>
       ) : !hasActiveLockIn ? (
         <Pressable style={styles.lockInTrigger} onPress={() => onLockIn(milestone.id)}>
-          <Text style={styles.lockInTriggerText}>🎯  Focus on this mini-goal</Text>
+          <Text style={styles.lockInTriggerText}>◎  Focus on this mini-goal</Text>
         </Pressable>
       ) : null}
     </View>
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 15, fontWeight: '600', marginBottom: 3 },
   editHint: { color: colors.muted, fontSize: 11, fontWeight: '400' },
   titleInput: { color: colors.text, fontSize: 15, fontWeight: '600', borderBottomWidth: 1, borderBottomColor: colors.primary, paddingVertical: 2, marginBottom: 3 },
-  dateLabel: { color: colors.blue, fontSize: 12 },
+  dateLabel: { color: colors.primary, fontSize: 12 },
   rightCol: { alignItems: 'center', gap: spacing.xs },
   pct: { color: colors.primary, fontSize: 12, fontWeight: '600' },
   pctLockedIn: { color: colors.primary, fontWeight: '800' },
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.cardBorder,
     alignItems: 'center',
   },
-  lockInTriggerText: { color: colors.muted, fontSize: 13, fontWeight: '600' },
+  lockInTriggerText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
 
   lockInFooter: {
     marginTop: spacing.md,

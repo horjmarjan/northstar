@@ -40,7 +40,7 @@ export default function TimelineScreen() {
             </View>
             <Text style={styles.heroPct}>{overallPct}%</Text>
           </View>
-          <Text style={styles.heroSub}>{doneTasks} of {allTasks.length} tasks complete</Text>
+          <Text style={styles.heroSub}>{doneTasks} of {allTasks.length} milestones complete</Text>
         </View>
       )}
 
@@ -82,7 +82,7 @@ export default function TimelineScreen() {
               </View>
 
               {m.targetDate ? (
-                <Text style={styles.dateTag}>📅  {m.targetDate}</Text>
+                <Text style={styles.dateTag}>◷  {m.targetDate}</Text>
               ) : (
                 <Text style={styles.noDate}>No date set</Text>
               )}
@@ -93,7 +93,7 @@ export default function TimelineScreen() {
                     <View style={[styles.taskFill, { flex: pct }]} />
                     <View style={{ flex: 100 - pct }} />
                   </View>
-                  <Text style={styles.taskCount}>{done}/{m.tasks.length} tasks · {pct}%</Text>
+                  <Text style={styles.taskCount}>{done}/{m.tasks.length} milestones · {pct}%</Text>
                 </>
               )}
 
@@ -106,7 +106,7 @@ export default function TimelineScreen() {
                     </View>
                   ))}
                   {m.tasks.length > 3 && (
-                    <Text style={styles.moreTasks}>+{m.tasks.length - 3} more tasks</Text>
+                    <Text style={styles.moreTasks}>+{m.tasks.length - 3} more milestones</Text>
                   )}
                 </View>
               )}
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   statusBadge: { borderRadius: radius.full, paddingVertical: 2, paddingHorizontal: 8, borderWidth: 1 },
   statusText: { fontSize: 10, fontWeight: '700' },
 
-  dateTag: { color: colors.blue, fontSize: 12, marginBottom: spacing.sm },
+  dateTag: { color: colors.primary, fontSize: 12, marginBottom: spacing.sm },
   noDate: { color: colors.cardBorder, fontSize: 12, marginBottom: spacing.sm },
 
   taskBar: { height: 3, backgroundColor: colors.cardBorder, borderRadius: radius.full, marginBottom: 3, overflow: 'hidden', flexDirection: 'row' },

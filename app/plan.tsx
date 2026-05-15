@@ -406,7 +406,7 @@ export default function PlanScreen() {
       <View style={styles.hintRow}>
         <Text style={styles.hint}>Long-press tab to rename  ·  tap ✎ to edit</Text>
         <Pressable style={styles.timelineBtn} onPress={() => router.push('/timeline')}>
-          <Text style={styles.timelineBtnText}>📅 Timeline</Text>
+          <Text style={styles.timelineBtnText}>◷ Timeline</Text>
         </Pressable>
       </View>
 
@@ -424,7 +424,7 @@ export default function PlanScreen() {
             style={styles.focusBanner}
           >
             <View style={styles.focusBannerLeft}>
-              <Text style={styles.focusBannerLabel}>🎯  FOCUS MODE</Text>
+              <Text style={styles.focusBannerLabel}>◎  FOCUS MODE</Text>
               <Text style={styles.focusBannerTitle} numberOfLines={1}>{locked.title}</Text>
               {total > 0 && <Text style={styles.focusBannerMeta}>{done} of {total} tasks done</Text>}
             </View>
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
   hintRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   hint: { flex: 1, color: colors.muted, fontSize: 11 },
   timelineBtn: { backgroundColor: colors.card, borderRadius: radius.full, paddingVertical: 5, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.cardBorder },
-  timelineBtnText: { color: colors.text, fontSize: 12, fontWeight: '600' },
+  timelineBtnText: { color: colors.primary, fontSize: 12, fontWeight: '600' },
 
   focusBanner: {
     marginHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.xs,

@@ -285,24 +285,24 @@ const styles = StyleSheet.create({
   savedLabel: { color: colors.success, fontSize: 12, fontWeight: '600' },
 
   completeBadge: {
-    backgroundColor: '#D4EDDA',
+    backgroundColor: colors.primaryDim,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: radius.full,
   },
-  completeBadgeText: { color: '#2A7A3A', fontSize: 12, fontWeight: '700' },
+  completeBadgeText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
 
   completeBanner: {
-    backgroundColor: '#D4EDDA',
+    backgroundColor: colors.primaryDim,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.lg,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#A8D5B5',
+    borderColor: colors.cardBorder,
   },
-  completeBannerText: { color: '#2A7A3A', fontSize: 18, fontWeight: '700', marginBottom: 4 },
-  completeBannerSub: { color: '#3A9A50', fontSize: 14 },
+  completeBannerText: { color: colors.primary, fontSize: 18, fontWeight: '700', marginBottom: 4 },
+  completeBannerSub: { color: colors.teal, fontSize: 14 },
 
   scroll: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: 80 },
@@ -334,9 +334,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   progressFill: { height: 6, backgroundColor: colors.primary },
-  progressFillDone: { backgroundColor: '#3DA85A' },
+  progressFillDone: { backgroundColor: colors.teal },
   progressText: { color: colors.primary, fontSize: 12, fontWeight: '600' },
-  progressTextDone: { color: '#3DA85A' },
+  progressTextDone: { color: colors.teal },
 
   sectionLabel: {
     color: colors.muted,

@@ -14,10 +14,11 @@ function formatDate(d: Date) {
 }
 
 const QUICK = [
-  { label: 'Now', days: 0 },
-  { label: '3 Days', days: 3 },
-  { label: '1 Week', days: 7 },
-  { label: '3 Weeks', days: 21 },
+  { label: '1 Week',   days: 7 },
+  { label: '1 Month',  days: 30 },
+  { label: '3 Months', days: 90 },
+  { label: '6 Months', days: 180 },
+  { label: '1 Year',   days: 365 },
 ];
 
 interface Props {
@@ -71,6 +72,7 @@ export function DatePickerModal({ visible, current, onSelect, onClose }: Props) 
           mode="date"
           display="inline"
           minimumDate={new Date()}
+          maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
           onChange={(_, date) => { if (date) setPickerDate(date); }}
           themeVariant="light"
           accentColor={colors.primary}
@@ -103,18 +105,18 @@ const styles = StyleSheet.create({
   handle: { width: 36, height: 4, backgroundColor: colors.muted, borderRadius: 2, alignSelf: 'center', marginTop: spacing.sm, marginBottom: spacing.md },
   title: { color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: spacing.md },
 
-  quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   quickBtn: {
-    flex: 1,
     backgroundColor: colors.primaryDim,
-    borderRadius: radius.md,
-    padding: spacing.sm,
+    borderRadius: radius.full,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.primary + '44',
   },
   quickLabel: { color: colors.primary, fontWeight: '700', fontSize: 13 },
-  quickDate: { color: colors.muted, fontSize: 11, marginTop: 2 },
+  quickDate: { color: colors.muted, fontSize: 11, marginTop: 1 },
 
   divider: { height: 1, backgroundColor: colors.cardBorder, marginBottom: spacing.sm },
 

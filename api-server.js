@@ -10,56 +10,124 @@ try {
 } catch (e) {}
 
 const express = require('express');
+const crypto  = require('crypto');
+const jwt     = require('jsonwebtoken');
 const Anthropic = require('@anthropic-ai/sdk').default;
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
+const JWT_SECRET = process.env.JWT_SECRET || 'northstar-dev-secret-change-in-prod';
+const MAX_USERS  = 10;
+
 // CORS — must be before all routes
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
-// ── File-based shared storage ──────────────────────────────────────────────
+// ── File-based storage ─────────────────────────────────────────────────────
 const DATA_FILE = path.join(__dirname, 'server-data.json');
+const AUTH_FILE = path.join(__dirname, 'auth-data.json');
 
-function readData() {
-  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch { return {}; }
+function readData()  { try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch { return {}; } }
+function writeData(d){ fs.writeFileSync(DATA_FILE, JSON.stringify(d), 'utf8'); }
+function readAuth()  { try { return JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8')); } catch { return { users: {} }; } }
+function writeAuth(d){ fs.writeFileSync(AUTH_FILE, JSON.stringify(d), 'utf8'); }
+
+// ── Password helpers ───────────────────────────────────────────────────────
+function hashPassword(password, salt) {
+  return crypto.createHmac('sha256', salt).update(password).digest('hex');
 }
-function writeData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data), 'utf8');
+function newSalt() { return crypto.randomBytes(16).toString('hex'); }
+
+// ── Auth middleware ────────────────────────────────────────────────────────
+function requireAuth(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    req.user = jwt.verify(header.slice(7), JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
 }
 
-app.get('/api/storage/:key', (req, res) => {
-  const data = readData();
-  res.json({ value: data[req.params.key] ?? null });
+// ── Auth routes ────────────────────────────────────────────────────────────
+app.post('/api/auth/register', (req, res) => {
+  const { username, password } = req.body;
+  if (!username?.trim() || !password?.trim())
+    return res.status(400).json({ error: 'Username and password are required' });
+
+  const auth = readAuth();
+  const users = auth.users || {};
+
+  if (Object.keys(users).length >= MAX_USERS)
+    return res.status(403).json({ error: 'Beta is full — maximum testers reached' });
+
+  const lc = username.trim().toLowerCase();
+  if (Object.values(users).some(u => u.username === lc))
+    return res.status(409).json({ error: 'Username already taken' });
+
+  if (password.length < 6)
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+  const id   = `user_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const salt = newSalt();
+  users[id]  = { id, username: lc, salt, hash: hashPassword(password, salt), createdAt: new Date().toISOString() };
+  writeAuth({ users });
+
+  const token = jwt.sign({ id, username: lc }, JWT_SECRET, { expiresIn: '90d' });
+  res.json({ token, userId: id, username: lc });
 });
 
-app.post('/api/storage/:key', (req, res) => {
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username?.trim() || !password?.trim())
+    return res.status(400).json({ error: 'Username and password are required' });
+
+  const { users } = readAuth();
+  const user = Object.values(users || {}).find(u => u.username === username.trim().toLowerCase());
+  if (!user || hashPassword(password, user.salt) !== user.hash)
+    return res.status(401).json({ error: 'Invalid username or password' });
+
+  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '90d' });
+  res.json({ token, userId: user.id, username: user.username });
+});
+
+// ── User-scoped storage ────────────────────────────────────────────────────
+app.get('/api/storage/:key', requireAuth, (req, res) => {
   const data = readData();
-  data[req.params.key] = req.body.value;
+  const userBucket = data[req.user.id] || {};
+  res.json({ value: userBucket[req.params.key] ?? null });
+});
+
+app.post('/api/storage/:key', requireAuth, (req, res) => {
+  const data = readData();
+  if (!data[req.user.id]) data[req.user.id] = {};
+  data[req.user.id][req.params.key] = req.body.value;
   writeData(data);
   res.json({ ok: true });
 });
 
-app.delete('/api/storage', (req, res) => {
-  writeData({});
+app.delete('/api/storage', requireAuth, (req, res) => {
+  const data = readData();
+  data[req.user.id] = {};
+  writeData(data);
   res.json({ ok: true });
 });
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// POST /api/generate-plan
-app.post('/api/generate-plan', async (req, res) => {
+// ── Generate plan ──────────────────────────────────────────────────────────
+app.post('/api/generate-plan', requireAuth, async (req, res) => {
   const { goal, why, miniGoals = [] } = req.body;
   if (!goal?.trim()) return res.status(400).json({ error: 'goal is required' });
 
   const hasMiniGoals = miniGoals.length > 0;
-
   const prompt = hasMiniGoals
     ? `North Star: "${goal}"
 Why: "${why}"
@@ -87,21 +155,21 @@ Return ONLY this JSON:
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const raw = message.content[0].text;
+    const raw  = message.content[0].text;
     const text = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
     const parsed = JSON.parse(text);
     const nsId = `ns${Date.now()}`;
 
     const milestones = parsed.milestones.map((m, i) => ({
-      id: `m${i}`,
+      id: `m${i}_${Date.now()}`,
       northStarId: nsId,
       title: m.title,
       description: m.description,
       order: i,
       completed: false,
       tasks: m.tasks.map((t, j) => ({
-        id: `t${i}${j}`,
-        milestoneId: `m${i}`,
+        id: `t${i}${j}_${Date.now()}`,
+        milestoneId: `m${i}_${Date.now()}`,
         title: t.title,
         completed: false,
         order: j,
@@ -115,12 +183,11 @@ Return ONLY this JSON:
   }
 });
 
-// POST /api/send-checkin
-app.post('/api/send-checkin', async (req, res) => {
+// ── SMS check-in (supporters) ─────────────────────────────────────────────
+app.post('/api/send-checkin', requireAuth, async (req, res) => {
   const { goal, supporterName, supporterPhone, userName, progressSummary } = req.body;
-  if (!supporterPhone || !goal) {
+  if (!supporterPhone || !goal)
     return res.status(400).json({ error: 'supporterPhone and goal are required' });
-  }
 
   try {
     const message = await anthropic.messages.create({
@@ -129,32 +196,64 @@ app.post('/api/send-checkin', async (req, res) => {
       system: `You write warm, personal SMS check-in messages on behalf of a goal-tracking app.
 The message is sent to a friend or family member asking them to check in with their loved one.
 Keep it under 160 characters, conversational, warm. No hashtags. Return only the message text.`,
-      messages: [
-        {
-          role: 'user',
-          content: `Write an SMS to ${supporterName} asking them to check in with ${userName || 'their friend'}.
+      messages: [{
+        role: 'user',
+        content: `Write an SMS to ${supporterName} asking them to check in with ${userName || 'their friend'}.
 Goal: "${goal}"
 Progress so far: ${progressSummary || 'just getting started'}
-
 The message should feel personal, not automated. Mention the goal briefly.`,
-        },
-      ],
+      }],
     });
 
-    const smsText = message.content[0].text.trim().replace(/^["']|["']$/g, '');
+    const msgText = message.content[0].text.trim().replace(/^["']|["']$/g, '');
 
-    // Send via Twilio
-    const twilio = require('twilio')(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_AUTH_TOKEN
-    );
+    const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     await twilio.messages.create({
-      body: smsText,
+      body: msgText,
       from: process.env.TWILIO_PHONE_NUMBER,
-      to: supporterPhone,
+      to:   supporterPhone,
     });
 
-    res.json({ sent: true, preview: smsText });
+    res.json({ sent: true, preview: msgText });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── AI accountability nudge ────────────────────────────────────────────────
+app.post('/api/send-accountability', requireAuth, async (req, res) => {
+  const { goal, why, nextStep, nextTask, userPhone, userName } = req.body;
+  if (!userPhone || !goal)
+    return res.status(400).json({ error: 'userPhone and goal are required' });
+
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 256,
+      system: `You write short, energising SMS accountability messages for someone working toward a personal goal.
+Be warm, direct, and specific. Under 160 characters. No hashtags. Return only the message text.`,
+      messages: [{
+        role: 'user',
+        content: `Write an SMS nudge for ${userName || 'someone'}.
+North Star: "${goal}"
+Why it matters: "${why || ''}"
+Most important next step: "${nextStep || ''}"
+Specific task to act on: "${nextTask || ''}"
+Remind them of their next step and encourage them to take one action today.`,
+      }],
+    });
+
+    const msgText = message.content[0].text.trim().replace(/^["']|["']$/g, '');
+
+    const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    await twilio.messages.create({
+      body: msgText,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to:   userPhone,
+    });
+
+    res.json({ sent: true, preview: msgText });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -162,4 +261,4 @@ The message should feel personal, not automated. Mention the goal briefly.`,
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, '0.0.0.0', () => console.log(`API server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`NorthStar API running on port ${PORT}`));

@@ -9,7 +9,7 @@ export const colors = {
   text: '#1A1714',         // near-black warm tone
   muted: '#A09890',        // warm gray
   success: '#52B788',      // sage green
-  danger: '#E06B6B',       // soft coral red
+  danger: '#8B6B4A',       // warm brown — destructive actions, no red
   inputBg: '#F7F2EC',      // warm light input background
 };
 
