@@ -71,6 +71,7 @@ export function DatePickerModal({ visible, current, onSelect, onClose }: Props) 
           mode="date"
           display="inline"
           minimumDate={new Date()}
+          maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
           onChange={(_, date) => { if (date) setPickerDate(date); }}
           themeVariant="light"
           accentColor={colors.primary}
