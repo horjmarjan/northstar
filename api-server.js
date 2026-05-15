@@ -29,6 +29,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Health check ──────────────────────────────────────────────────────────
+app.get('/', (req, res) => res.json({ status: 'ok', app: 'NorthStar API' }));
+
 // ── File-based storage ─────────────────────────────────────────────────────
 const DATA_FILE = path.join(__dirname, 'server-data.json');
 const AUTH_FILE = path.join(__dirname, 'auth-data.json');
