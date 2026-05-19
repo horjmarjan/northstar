@@ -2,12 +2,12 @@
   "expo": {
     "name": "NorthStar",
     "slug": "northstar",
+    "owner": "jimhoran",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "northstar",
-
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -22,7 +22,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F2EBE0"
       },
-      "package": "com.northstar.app"
+      "package": "com.northstar.app",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -37,6 +41,18 @@
           "photosPermission": "NorthStar uses your photo library to set a profile picture."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "87f22636-fdd2-42b5-9678-ffd4aa204f9a"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/87f22636-fdd2-42b5-9678-ffd4aa204f9a"
+    }
   }
 }
