@@ -13,12 +13,40 @@ const express = require('express');
 const crypto  = require('crypto');
 const jwt     = require('jsonwebtoken');
 const Anthropic = require('@anthropic-ai/sdk').default;
+const Redis   = require('ioredis');
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'northstar-dev-secret-change-in-prod';
 const MAX_USERS  = 10;
+
+// ── Redis client ───────────────────────────────────────────────────────────
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  maxRetriesPerRequest: 3,
+  lazyConnect: false,
+});
+redis.on('error', (err) => console.error('Redis error:', err.message));
+
+// Redis helpers
+async function readAuth() {
+  const raw = await redis.get('auth:users');
+  return raw ? JSON.parse(raw) : { users: {} };
+}
+async function writeAuth(d) {
+  await redis.set('auth:users', JSON.stringify(d));
+}
+async function getUserData(userId, key) {
+  const raw = await redis.get(`data:${userId}:${key}`);
+  return raw ? JSON.parse(raw) : null;
+}
+async function setUserData(userId, key, value) {
+  await redis.set(`data:${userId}:${key}`, JSON.stringify(value));
+}
+async function clearUserData(userId) {
+  const keys = await redis.keys(`data:${userId}:*`);
+  if (keys.length) await redis.del(...keys);
+}
 
 // CORS — must be before all routes
 app.use((req, res, next) => {
@@ -31,15 +59,6 @@ app.use((req, res, next) => {
 
 // ── Health check ──────────────────────────────────────────────────────────
 app.get('/', (req, res) => res.json({ status: 'ok', app: 'NorthStar API' }));
-
-// ── File-based storage ─────────────────────────────────────────────────────
-const DATA_FILE = path.join(__dirname, 'server-data.json');
-const AUTH_FILE = path.join(__dirname, 'auth-data.json');
-
-function readData()  { try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch { return {}; } }
-function writeData(d){ fs.writeFileSync(DATA_FILE, JSON.stringify(d), 'utf8'); }
-function readAuth()  { try { return JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8')); } catch { return { users: {} }; } }
-function writeAuth(d){ fs.writeFileSync(AUTH_FILE, JSON.stringify(d), 'utf8'); }
 
 // ── Password helpers ───────────────────────────────────────────────────────
 function hashPassword(password, salt) {
@@ -60,12 +79,12 @@ function requireAuth(req, res, next) {
 }
 
 // ── Auth routes ────────────────────────────────────────────────────────────
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   const { username, password } = req.body;
   if (!username?.trim() || !password?.trim())
     return res.status(400).json({ error: 'Username and password are required' });
 
-  const auth = readAuth();
+  const auth  = await readAuth();
   const users = auth.users || {};
 
   if (Object.keys(users).length >= MAX_USERS)
@@ -81,18 +100,18 @@ app.post('/api/auth/register', (req, res) => {
   const id   = `user_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   const salt = newSalt();
   users[id]  = { id, username: lc, salt, hash: hashPassword(password, salt), createdAt: new Date().toISOString() };
-  writeAuth({ users });
+  await writeAuth({ users });
 
   const token = jwt.sign({ id, username: lc }, JWT_SECRET, { expiresIn: '90d' });
   res.json({ token, userId: id, username: lc });
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username?.trim() || !password?.trim())
     return res.status(400).json({ error: 'Username and password are required' });
 
-  const { users } = readAuth();
+  const { users } = await readAuth();
   const user = Object.values(users || {}).find(u => u.username === username.trim().toLowerCase());
   if (!user || hashPassword(password, user.salt) !== user.hash)
     return res.status(401).json({ error: 'Invalid username or password' });
@@ -102,24 +121,18 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 // ── User-scoped storage ────────────────────────────────────────────────────
-app.get('/api/storage/:key', requireAuth, (req, res) => {
-  const data = readData();
-  const userBucket = data[req.user.id] || {};
-  res.json({ value: userBucket[req.params.key] ?? null });
+app.get('/api/storage/:key', requireAuth, async (req, res) => {
+  const value = await getUserData(req.user.id, req.params.key);
+  res.json({ value });
 });
 
-app.post('/api/storage/:key', requireAuth, (req, res) => {
-  const data = readData();
-  if (!data[req.user.id]) data[req.user.id] = {};
-  data[req.user.id][req.params.key] = req.body.value;
-  writeData(data);
+app.post('/api/storage/:key', requireAuth, async (req, res) => {
+  await setUserData(req.user.id, req.params.key, req.body.value);
   res.json({ ok: true });
 });
 
-app.delete('/api/storage', requireAuth, (req, res) => {
-  const data = readData();
-  data[req.user.id] = {};
-  writeData(data);
+app.delete('/api/storage', requireAuth, async (req, res) => {
+  await clearUserData(req.user.id);
   res.json({ ok: true });
 });
 
