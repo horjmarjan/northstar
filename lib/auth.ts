@@ -1,9 +1,13 @@
+import { Platform } from 'react-native';
 import { API } from './apiUrl';
 
-// In-memory session — survives navigation, cleared on app restart (forces re-login)
-let _token: string | null = null;
-let _username: string | null = null;
-let _userId: string | null = null;
+// On web: persist session to localStorage so page refreshes don't log you out.
+// On native: keep in-memory (re-login on app restart is intentional).
+const isWeb = Platform.OS === 'web';
+
+let _token: string | null = isWeb ? (typeof localStorage !== 'undefined' ? localStorage.getItem('ns:token') : null) : null;
+let _username: string | null = isWeb ? (typeof localStorage !== 'undefined' ? localStorage.getItem('ns:username') : null) : null;
+let _userId: string | null = isWeb ? (typeof localStorage !== 'undefined' ? localStorage.getItem('ns:userId') : null) : null;
 
 const AUTH_TIMEOUT_MS = 6000;
 
@@ -18,12 +22,22 @@ export function setSession(token: string, userId: string, username: string) {
   _token = token;
   _userId = userId;
   _username = username;
+  if (isWeb && typeof localStorage !== 'undefined') {
+    localStorage.setItem('ns:token', token);
+    localStorage.setItem('ns:userId', userId);
+    localStorage.setItem('ns:username', username);
+  }
 }
 
 export function clearSession() {
   _token = null;
   _userId = null;
   _username = null;
+  if (isWeb && typeof localStorage !== 'undefined') {
+    localStorage.removeItem('ns:token');
+    localStorage.removeItem('ns:userId');
+    localStorage.removeItem('ns:username');
+  }
 }
 
 export function getToken(): string | null { return _token; }
