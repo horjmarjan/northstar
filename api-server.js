@@ -22,7 +22,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'northstar-dev-secret-change-in-pro
 const MAX_USERS  = 10;
 
 // ── Redis client ───────────────────────────────────────────────────────────
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+const REDIS_URL = process.env.REDIS_URL
+  || 'redis://default:TUUAbbBJbsgDAzVohusexhfAdjUCCbNL@kodama.proxy.rlwy.net:11900';
+const redis = new Redis(REDIS_URL, {
   maxRetriesPerRequest: 3,
   lazyConnect: false,
 });
