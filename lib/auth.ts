@@ -40,10 +40,25 @@ export function clearSession() {
   }
 }
 
-export function getToken(): string | null { return _token; }
-export function getUsername(): string | null { return _username; }
-export function getUserId(): string | null { return _userId; }
-export function isLoggedIn(): boolean { return !!_token; }
+export function getToken(): string | null {
+  if (isWeb && typeof localStorage !== 'undefined') {
+    return _token || localStorage.getItem('ns:token');
+  }
+  return _token;
+}
+export function getUsername(): string | null {
+  if (isWeb && typeof localStorage !== 'undefined') {
+    return _username || localStorage.getItem('ns:username');
+  }
+  return _username;
+}
+export function getUserId(): string | null {
+  if (isWeb && typeof localStorage !== 'undefined') {
+    return _userId || localStorage.getItem('ns:userId');
+  }
+  return _userId;
+}
+export function isLoggedIn(): boolean { return !!getToken(); }
 
 export async function login(username: string, password: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
