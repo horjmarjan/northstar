@@ -106,6 +106,32 @@ export default function OnboardingScreen() {
     return true;
   };
 
+  const NavButtons = () => (
+    <View style={styles.inlineNav}>
+      {step > 0 ? (
+        <Pressable style={styles.backBtn} onPress={() => goTo(step - 1)}>
+          <Text style={styles.backBtnText}>← Back</Text>
+        </Pressable>
+      ) : <View />}
+      {step < STEPS.length - 1 && (
+        <Pressable
+          style={[styles.nextBtnWrapper, !canAdvance() && { opacity: 0.4 }]}
+          onPress={() => canAdvance() && goTo(step + 1)}
+          disabled={!canAdvance()}
+        >
+          <LinearGradient
+            colors={gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.nextBtn}
+          >
+            <Text style={styles.nextBtnText}>{step === 0 ? "Let's go →" : 'Next →'}</Text>
+          </LinearGradient>
+        </Pressable>
+      )}
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -123,6 +149,7 @@ export default function OnboardingScreen() {
         {step === 0 && (
           <ScrollView contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
             <Text style={styles.eyebrow}>BEFORE WE BEGIN</Text>
+
             <Text style={styles.stepTitle}>What's a North Star?</Text>
 
             <View style={styles.calloutCard}>
@@ -152,6 +179,7 @@ export default function OnboardingScreen() {
               <Text style={styles.tip}>◎  Reflects your values, not just outcomes</Text>
               <Text style={styles.tip}>◎  Guides decisions when things get hard</Text>
             </View>
+            <NavButtons />
           </ScrollView>
         )}
 
@@ -184,6 +212,7 @@ export default function OnboardingScreen() {
               textAlignVertical="top"
             />
             <Text style={styles.charCount}>{goal.length}/200</Text>
+            <NavButtons />
           </ScrollView>
         )}
 
@@ -215,6 +244,7 @@ export default function OnboardingScreen() {
               textAlignVertical="top"
             />
             <Text style={styles.charCount}>{why.length}/400</Text>
+            <NavButtons />
           </ScrollView>
         )}
 
@@ -269,33 +299,6 @@ export default function OnboardingScreen() {
         )}
       </Animated.View>
 
-      {/* Navigation */}
-      <View style={styles.navRow}>
-        {step > 0 ? (
-          <Pressable style={styles.backBtn} onPress={() => goTo(step - 1)}>
-            <Text style={styles.backBtnText}>← Back</Text>
-          </Pressable>
-        ) : (
-          <View />
-        )}
-
-        {step < STEPS.length - 1 && (
-          <Pressable
-            style={[styles.nextBtnWrapper, !canAdvance() && { opacity: 0.4 }]}
-            onPress={() => canAdvance() && goTo(step + 1)}
-            disabled={!canAdvance()}
-          >
-            <LinearGradient
-              colors={gradients.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.nextBtn}
-            >
-              <Text style={styles.nextBtnText}>{step === 0 ? "Let's go →" : 'Next →'}</Text>
-            </LinearGradient>
-          </Pressable>
-        )}
-      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -308,7 +311,7 @@ const styles = StyleSheet.create({
   dotActive: { width: 24, backgroundColor: colors.primary },
 
   stepWrap: { flex: 1 },
-  stepContent: { paddingHorizontal: spacing.lg, paddingBottom: 100 },
+  stepContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
 
   eyebrow: { color: colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 2, marginBottom: spacing.xs },
   stepTitle: { color: colors.text, fontSize: 28, fontWeight: '800', lineHeight: 36, marginBottom: spacing.sm },
@@ -383,8 +386,8 @@ const styles = StyleSheet.create({
   generateBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   aiNote: { color: colors.muted, fontSize: 12, textAlign: 'center', lineHeight: 18 },
 
-  // Nav row
-  navRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: Platform.OS === 'ios' ? 40 : spacing.lg, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.cardBorder, backgroundColor: colors.bg },
+  // Inline nav (flows below content, right-aligned)
+  inlineNav: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: spacing.lg, paddingBottom: Platform.OS === 'ios' ? 40 : spacing.lg, gap: spacing.md },
   backBtn: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   backBtnText: { color: colors.primary, fontWeight: '600', fontSize: 15 },
   nextBtnWrapper: { borderRadius: radius.full, overflow: 'hidden' },
