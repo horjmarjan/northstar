@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Milestone } from '../lib/types';
 import { colors, radius, spacing } from '../lib/theme';
 import { TaskItem } from './TaskItem';
@@ -46,10 +45,6 @@ export function MilestoneCard({
   const [expanded, setExpanded] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [showSubGoals, setShowSubGoals] = useState(false);
-  const [addingSubGoal, setAddingSubGoal] = useState(false);
-  const [newSubGoalTitle, setNewSubGoalTitle] = useState('');
-  const [generatingSubGoal, setGeneratingSubGoal] = useState(false);
 
   const done = milestone.tasks.filter((t) => t.completed).length;
   const pct = milestone.tasks.length > 0 ? Math.round((done / milestone.tasks.length) * 100) : 0;
@@ -145,7 +140,12 @@ export function MilestoneCard({
         <View style={{ flex: 100 - pct }} />
       </View>
 
-      {/* Tasks */}
+      {/* Sub-steps label */}
+      {milestone.tasks.length > 0 && (
+        <Text style={styles.subStepsLabel}>SUB-STEPS</Text>
+      )}
+
+      {/* Sub-steps (tasks) */}
       <View style={styles.tasks}>
         {visibleTasks.map((task, i) => (
           <TaskItem
@@ -166,11 +166,11 @@ export function MilestoneCard({
       {/* Show more / less */}
       {hiddenCount > 0 && (
         <Pressable onPress={() => setExpanded(!expanded)} style={styles.showMore}>
-          <Text style={styles.showMoreText}>{expanded ? 'Show less' : `Show ${hiddenCount} more task${hiddenCount > 1 ? 's' : ''}`}</Text>
+          <Text style={styles.showMoreText}>{expanded ? 'Show less' : `Show ${hiddenCount} more sub-step${hiddenCount > 1 ? 's' : ''}`}</Text>
         </Pressable>
       )}
 
-      {/* Add task */}
+      {/* Add sub-step */}
       <DatePickerModal
         visible={showDatePicker}
         current={milestone.targetDate}
@@ -184,7 +184,7 @@ export function MilestoneCard({
             style={styles.addTaskInput}
             value={newTaskTitle}
             onChangeText={setNewTaskTitle}
-            placeholder="New task…"
+            placeholder="New sub-step…"
             placeholderTextColor={colors.muted}
             autoFocus
             maxLength={120}
@@ -197,93 +197,8 @@ export function MilestoneCard({
         </View>
       ) : (
         <Pressable onPress={() => setAddingTask(true)} style={styles.addTaskBtn}>
-          <Text style={styles.addTaskBtnText}>+ Add task</Text>
+          <Text style={styles.addTaskBtnText}>+ Add sub-step</Text>
         </Pressable>
-      )}
-
-      {/* Sub-Goals */}
-      <View style={styles.subGoalsDivider} />
-      <Pressable style={styles.subGoalsHeader} onPress={() => setShowSubGoals(!showSubGoals)}>
-        <Text style={styles.subGoalsHeaderText}>
-          ◆  Sub-Goals
-          {(milestone.subGoals?.length ?? 0) > 0 ? `  (${milestone.subGoals!.length})` : ''}
-        </Text>
-        <Text style={styles.subGoalsChevron}>{showSubGoals ? '▲' : '▼'}</Text>
-      </Pressable>
-
-      {showSubGoals && (
-        <View style={styles.subGoalsList}>
-          {(milestone.subGoals ?? []).map((sg) => (
-
-            <Pressable
-              key={sg.id}
-              style={styles.subGoalRow}
-              onPress={() => router.push({ pathname: '/subgoal', params: { milestoneId: milestone.id, subGoalId: sg.id } })}
-            >
-              <View style={styles.subGoalDot} />
-              <View style={styles.subGoalInfo}>
-                <Text style={styles.subGoalTitle}>{sg.title}</Text>
-                <Text style={styles.subGoalMeta}>
-                  {sg.tasks.length > 0
-                    ? `${sg.tasks.filter(t => t.completed).length}/${sg.tasks.length} steps`
-                    : 'No steps yet'}
-                </Text>
-              </View>
-              <Pressable
-                style={styles.promoteBtn}
-                onPress={(e) => { e.stopPropagation(); onPromoteSubGoal(milestone.id, sg.id); }}
-                hitSlop={8}
-              >
-                <Text style={styles.promoteBtnText}>↑</Text>
-              </Pressable>
-              <Text style={styles.subGoalArrow}>›</Text>
-            </Pressable>
-          ))}
-
-          {addingSubGoal ? (
-            <View style={styles.addSubGoalBox}>
-              <TextInput
-                style={styles.addSubGoalInput}
-                value={newSubGoalTitle}
-                onChangeText={setNewSubGoalTitle}
-                placeholder="e.g. Salesforce Admin for media companies"
-                placeholderTextColor={colors.muted}
-                autoFocus
-                maxLength={150}
-              />
-              {generatingSubGoal ? (
-                <View style={styles.generatingRow}>
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <Text style={styles.generatingText}>Generating steps…</Text>
-                </View>
-              ) : (
-                <View style={styles.subGoalActions}>
-                  <Pressable
-                    style={[styles.sgBtn, styles.sgBtnPrimary, !newSubGoalTitle.trim() && styles.sgBtnDisabled]}
-                    onPress={() => submitSubGoal(true)}
-                    disabled={!newSubGoalTitle.trim()}
-                  >
-                    <Text style={styles.sgBtnPrimaryText}>✦ Generate Steps</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.sgBtn, !newSubGoalTitle.trim() && styles.sgBtnDisabled]}
-                    onPress={() => submitSubGoal(false)}
-                    disabled={!newSubGoalTitle.trim()}
-                  >
-                    <Text style={styles.sgBtnText}>Add Only</Text>
-                  </Pressable>
-                  <Pressable style={styles.sgBtn} onPress={() => { setAddingSubGoal(false); setNewSubGoalTitle(''); }}>
-                    <Text style={styles.sgBtnText}>Cancel</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-          ) : (
-            <Pressable style={styles.addSubGoalBtn} onPress={() => setAddingSubGoal(true)}>
-              <Text style={styles.addSubGoalBtnText}>+ Add sub-goal idea</Text>
-            </Pressable>
-          )}
-        </View>
       )}
 
       {/* Lock In footer */}
@@ -367,6 +282,7 @@ const styles = StyleSheet.create({
   deleteIcon: { fontSize: 14 },
   progressBar: { height: 3, backgroundColor: colors.cardBorder, borderRadius: radius.full, marginBottom: spacing.sm, overflow: 'hidden', flexDirection: 'row' },
   progressFill: { height: 3, backgroundColor: colors.primary, borderRadius: radius.full },
+  subStepsLabel: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: spacing.xs, marginTop: spacing.sm },
   tasks: { gap: 2 },
   showMore: { paddingVertical: spacing.xs, marginTop: 2 },
   showMoreText: { color: colors.blue, fontSize: 12 },
@@ -376,32 +292,6 @@ const styles = StyleSheet.create({
   addTaskInput: { flex: 1, backgroundColor: colors.inputBg, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.cardBorder, color: colors.text, fontSize: 13, paddingVertical: 6, paddingHorizontal: spacing.sm },
   addTaskConfirm: { backgroundColor: colors.primary, borderRadius: radius.sm, paddingVertical: 6, paddingHorizontal: spacing.sm },
   addTaskConfirmText: { color: colors.bg, fontWeight: '700', fontSize: 12 },
-
-  subGoalsDivider: { height: 1, backgroundColor: colors.cardBorder, marginTop: spacing.md, marginBottom: spacing.sm },
-  subGoalsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  subGoalsHeaderText: { color: colors.blue, fontSize: 12, fontWeight: '700' },
-  subGoalsChevron: { color: colors.muted, fontSize: 10 },
-  subGoalsList: { marginTop: spacing.sm, gap: spacing.xs },
-  subGoalRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.inputBg, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.cardBorder },
-  subGoalDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.blue },
-  subGoalInfo: { flex: 1 },
-  subGoalTitle: { color: colors.text, fontSize: 13, fontWeight: '600' },
-  subGoalMeta: { color: colors.muted, fontSize: 11, marginTop: 1 },
-  promoteBtn: { backgroundColor: colors.primaryDim, borderRadius: radius.full, paddingVertical: 3, paddingHorizontal: 7, borderWidth: 1, borderColor: colors.primary + '44' },
-  promoteBtnText: { color: colors.primary, fontSize: 11, fontWeight: '700' },
-  subGoalArrow: { color: colors.muted, fontSize: 18 },
-  addSubGoalBtn: { paddingVertical: spacing.xs },
-  addSubGoalBtnText: { color: colors.blue, fontSize: 12, fontWeight: '600' },
-  addSubGoalBox: { backgroundColor: colors.inputBg, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.cardBorder, gap: spacing.sm },
-  addSubGoalInput: { color: colors.text, fontSize: 13, borderBottomWidth: 1, borderBottomColor: colors.blue, paddingVertical: 4 },
-  generatingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  generatingText: { color: colors.muted, fontSize: 12 },
-  subGoalActions: { flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' },
-  sgBtn: { backgroundColor: colors.card, borderRadius: radius.full, paddingVertical: 5, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.cardBorder },
-  sgBtnPrimary: { backgroundColor: colors.primaryDim, borderColor: colors.primary + '44' },
-  sgBtnDisabled: { opacity: 0.4 },
-  sgBtnPrimaryText: { color: colors.primary, fontSize: 11, fontWeight: '700' },
-  sgBtnText: { color: colors.muted, fontSize: 11 },
 
   // Lock In footer
   lockInTrigger: {
