@@ -22,13 +22,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'northstar-dev-secret-change-in-pro
 const MAX_USERS  = 10;
 
 // ── Redis client ───────────────────────────────────────────────────────────
-const REDIS_URL = process.env.REDIS_URL
-  || 'redis://default:TUUAbbBJbsgDAzVohusexhfAdjUCCbNL@kodama.proxy.rlwy.net:11900';
-const redis = new Redis(REDIS_URL, {
+const redis = new Redis({
+  host: process.env.REDIS_HOST || 'kodama.proxy.rlwy.net',
+  port: parseInt(process.env.REDIS_PORT || '11900'),
+  password: process.env.REDIS_PASSWORD || 'TUUAbbBJbsgDAzVohusexhfAdjUCCbNL',
+  username: process.env.REDIS_USER || 'default',
   maxRetriesPerRequest: 3,
-  lazyConnect: false,
+  retryStrategy: (times) => Math.min(times * 100, 2000),
 });
-redis.on('error', (err) => console.error('Redis error:', err.message));
+redis.on('error', (err) => console.error('Redis error:', err.message, err.code, err.address, err.port));
 
 // Redis helpers
 async function readAuth() {
