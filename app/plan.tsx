@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { getMilestones, saveMilestones, getNorthStar, saveNorthStar, getProfileImage, getGoals, saveGoals } from '../lib/storage';
 import { getToken } from '../lib/auth';
 import { Goal, Milestone, NorthStar } from '../lib/types';
@@ -32,7 +32,7 @@ export default function PlanScreen() {
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [goalTitleDraft, setGoalTitleDraft] = useState('');
 
-  useEffect(() => { load(); }, []);
+  useFocusEffect(useCallback(() => { load(); }, []));
 
   const load = async () => {
     const [ns, img] = await Promise.all([getNorthStar(), getProfileImage()]);
