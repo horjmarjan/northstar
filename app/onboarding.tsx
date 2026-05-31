@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { saveNorthStar, saveMilestones, saveGoals } from '../lib/storage';
+import { addNorthStar, saveMilestones, saveGoals } from '../lib/storage';
 import { NorthStar, Milestone, Goal } from '../lib/types';
 import { colors, gradients, radius, spacing } from '../lib/theme';
 import { API } from '../lib/apiUrl';
@@ -88,9 +88,9 @@ export default function OnboardingScreen() {
         goalId: defaultGoal.id,
       }));
 
-      await saveNorthStar(ns);
-      await saveGoals([defaultGoal]);
-      await saveMilestones(milestones);
+      await addNorthStar(ns);
+      await saveGoals(ns.id, [defaultGoal]);
+      await saveMilestones(ns.id, milestones);
 
       router.replace('/plan');
     } catch (e: unknown) {

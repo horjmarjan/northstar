@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -14,8 +14,19 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { getNorthStar, getMilestones, clearAll, saveNorthStar, getGoalImage, saveGoalImage } from '../lib/storage';
+import { router, useFocusEffect } from 'expo-router';
+import {
+  getNorthStars,
+  getActiveNorthStarId,
+  setActiveNorthStarId,
+  getNorthStar,
+  saveNorthStar,
+  getMilestones,
+  clearAll,
+  deleteNorthStarAndData,
+  getGoalImage,
+  saveGoalImage,
+} from '../lib/storage';
 import { isLoggedIn } from '../lib/auth';
 import { NorthStar, Milestone } from '../lib/types';
 import { colors, gradients, spacing, radius } from '../lib/theme';
@@ -23,41 +34,34 @@ import { DatePickerModal } from '../components/DatePickerModal';
 
 function confirmReset(onConfirm: () => void) {
   if (Platform.OS === 'web') {
-    if (window.confirm('Reset your North Star? This will permanently delete your goal, action plan, and all progress. This cannot be undone.')) {
+    if (window.confirm('Reset this North Star? This will permanently delete this goal, its plan, and all progress. This cannot be undone.')) {
       onConfirm();
     }
   } else {
     Alert.alert(
-      'Reset your North Star?',
-      'This will permanently delete your goal, action plan, and all progress. This cannot be undone.',
+      'Reset this North Star?',
+      'This will permanently delete this goal, its plan, and all progress. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Yes, start over', style: 'destructive', onPress: onConfirm },
+        { text: 'Yes, delete it', style: 'destructive', onPress: onConfirm },
       ]
     );
   }
 }
 
-// ─── Bullseye with arrow icon ────────────────────────────────────────────────
+// ─── Bullseye with arrow icon ─────────────────────────────────────────────
 function BullseyeArrow({ size = 44, color = '#C9884A' }: { size?: number; color?: string }) {
   const r = size / 2;
   const totalWidth = size + size * 0.58;
   return (
     <View style={{ width: totalWidth, height: size, justifyContent: 'center' }}>
-      {/* Arrow shaft */}
-      <View style={{
-        position: 'absolute', left: 0, top: r - 1,
-        height: 2, width: size * 0.52, backgroundColor: color,
-      }} />
-      {/* Arrow head */}
+      <View style={{ position: 'absolute', left: 0, top: r - 1, height: 2, width: size * 0.52, backgroundColor: color }} />
       <View style={{
         position: 'absolute', left: size * 0.47, top: r - 5,
         width: 0, height: 0,
         borderTopWidth: 5, borderBottomWidth: 5, borderLeftWidth: 9,
-        borderTopColor: 'transparent', borderBottomColor: 'transparent',
-        borderLeftColor: color,
+        borderTopColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: color,
       }} />
-      {/* Concentric rings */}
       <View style={{ position: 'absolute', right: 0, width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
         <View style={{ position: 'absolute', width: size,        height: size,        borderRadius: r,          borderWidth: 2, borderColor: color, opacity: 0.28 }} />
         <View style={{ position: 'absolute', width: size * 0.67, height: size * 0.67, borderRadius: size * 0.335, borderWidth: 2, borderColor: color, opacity: 0.58 }} />
@@ -68,7 +72,7 @@ function BullseyeArrow({ size = 44, color = '#C9884A' }: { size?: number; color?
   );
 }
 
-// ─── Keyword extractor for goal images ───────────────────────────────────────
+// ─── Keyword extractor for goal images ────────────────────────────────────
 const STOP_WORDS = new Set([
   'a','an','the','to','for','and','or','of','in','on','at','is','my','i',
   'want','be','get','have','make','do','with','from','into','by','up','as',
@@ -82,10 +86,10 @@ function extractImageKeywords(goal: string): string {
   return (keywords.length ? keywords.slice(0, 3) : ['goal', 'inspiration']).join(',');
 }
 
-// Show splash once per app session — mark shown on first mount, not animation end
 let _splashShown = false;
 
 export default function HomeScreen() {
+  const [allNorthStars, setAllNorthStars] = useState<NorthStar[]>([]);
   const [northStar, setNorthStar] = useState<NorthStar | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,82 +98,85 @@ export default function HomeScreen() {
   const [whyDraft, setWhyDraft] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [goalImage, setGoalImage] = useState<string | null>(null);
-  // Capture whether to show splash before marking it done
   const [splashVisible, setSplashVisible] = useState(() => {
     const show = !_splashShown;
-    _splashShown = true;   // mark immediately so remounts never replay it
+    _splashShown = true;
     return show;
   });
   const splashOpacity = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => { loadData(); }, []);
-
-  // Route based on auth + data state once loading is done
-  useEffect(() => {
-    if (loading) return;
-    if (!isLoggedIn()) {
-      router.replace('/login');
-    } else if (!northStar) {
-      router.replace('/onboarding');
-    }
-  }, [loading, northStar]);
+  // Reload every time this screen comes into focus
+  useFocusEffect(useCallback(() => {
+    loadData();
+  }, []));
 
   const loadData = async () => {
-    // Skip the fetch entirely if not logged in — redirect handled by routing effect
     if (!isLoggedIn()) {
       setLoading(false);
+      router.replace('/login');
       return;
     }
-    const [ns, ms, cachedImg] = await Promise.all([getNorthStar(), getMilestones(), getGoalImage()]);
+    const [nsList, activeId] = await Promise.all([getNorthStars(), getActiveNorthStarId()]);
+    setAllNorthStars(nsList);
+
+    if (nsList.length === 0) {
+      setLoading(false);
+      router.replace('/onboarding');
+      return;
+    }
+
+    const ns = nsList.find(n => n.id === activeId) ?? nsList[0];
     setNorthStar(ns);
+
+    const [ms, cachedImg] = await Promise.all([getMilestones(ns.id), getGoalImage(ns.id)]);
     setMilestones(ms);
+
     if (cachedImg) {
       setGoalImage(cachedImg);
-    } else if (ns?.goal) {
-      fetchGoalImage(ns.goal);
+    } else if (ns.goal) {
+      fetchGoalImage(ns.id, ns.goal);
     }
     setLoading(false);
   };
 
-  const fetchGoalImage = async (goal: string) => {
-    try {
-      const keywords = extractImageKeywords(goal);
-      const url = `https://source.unsplash.com/featured/400x400/?${encodeURIComponent(keywords)}`;
-      // Follow the redirect to get a stable CDN URL
-      const res = await fetch(url, { redirect: 'follow' });
-      const stableUrl = res.url && res.url !== url ? res.url : url;
-      setGoalImage(stableUrl);
-      await saveGoalImage(stableUrl);
-    } catch {
-      // Silently fail — image just won't show
+  const switchNorthStar = async (ns: NorthStar) => {
+    await setActiveNorthStarId(ns.id);
+    setNorthStar(ns);
+    setGoalImage(null);
+    const [ms, img] = await Promise.all([getMilestones(ns.id), getGoalImage(ns.id)]);
+    setMilestones(ms);
+    if (img) {
+      setGoalImage(img);
+    } else if (ns.goal) {
+      fetchGoalImage(ns.id, ns.goal);
     }
   };
 
-  useEffect(() => {
-    const interval = setInterval(loadData, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const fetchGoalImage = async (nsId: string, goal: string) => {
+    try {
+      const keywords = extractImageKeywords(goal);
+      const url = `https://source.unsplash.com/featured/400x400/?${encodeURIComponent(keywords)}`;
+      const res = await fetch(url, { redirect: 'follow' });
+      const stableUrl = res.url && res.url !== url ? res.url : url;
+      setGoalImage(stableUrl);
+      await saveGoalImage(nsId, stableUrl);
+    } catch {
+      // Silently fail
+    }
+  };
 
-  useEffect(() => {
-    if (!splashVisible) return;
-    // Fade in
-    Animated.timing(splashOpacity, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start(() => {
-      // Hold, then fade out
+  // Splash animation
+  const splashShownRef = useRef(false);
+  if (splashVisible && !splashShownRef.current) {
+    splashShownRef.current = true;
+    Animated.timing(splashOpacity, { toValue: 1, duration: 600, useNativeDriver: true }).start(() => {
       setTimeout(() => {
-        Animated.timing(splashOpacity, {
-          toValue: 0,
-          duration: 700,
-          useNativeDriver: true,
-        }).start(() => {
+        Animated.timing(splashOpacity, { toValue: 0, duration: 700, useNativeDriver: true }).start(() => {
           setSplashVisible(false);
         });
       }, 2800);
     });
-  }, []);
+  }
 
   const openEdit = () => {
     setGoalDraft(northStar?.goal ?? '');
@@ -182,12 +189,12 @@ export default function HomeScreen() {
     const updated: NorthStar = { ...northStar, goal: goalDraft.trim(), why: whyDraft.trim() };
     await saveNorthStar(updated);
     setNorthStar(updated);
+    setAllNorthStars(prev => prev.map(n => n.id === updated.id ? updated : n));
     setEditing(false);
-    // Refresh goal image when goal text changes
     if (goalDraft.trim() !== northStar.goal) {
       setGoalImage(null);
-      await saveGoalImage('');
-      fetchGoalImage(goalDraft.trim());
+      await saveGoalImage(northStar.id, '');
+      fetchGoalImage(northStar.id, goalDraft.trim());
     }
   };
 
@@ -200,11 +207,20 @@ export default function HomeScreen() {
 
   const handleReset = () => {
     confirmReset(async () => {
-      await clearAll();
-      router.replace('/setup');
+      if (allNorthStars.length <= 1) {
+        // Last North Star — wipe everything and restart
+        await clearAll();
+        router.replace('/onboarding');
+      } else {
+        // Delete just this one, stay in the app
+        const nextId = await deleteNorthStarAndData(northStar!.id);
+        const remaining = allNorthStars.filter(n => n.id !== northStar!.id);
+        setAllNorthStars(remaining);
+        const next = remaining.find(n => n.id === nextId) ?? remaining[0];
+        await switchNorthStar(next);
+      }
     });
   };
-
 
   if (loading) {
     return (
@@ -226,9 +242,36 @@ export default function HomeScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {northStar ? (
           <>
-            {/* North Star card */}
+            {/* ── North Star switcher ─────────────────────────────────────── */}
+            {(allNorthStars.length > 1 || true) && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.nsSwitcher}
+                contentContainerStyle={styles.nsSwitcherContent}
+              >
+                {allNorthStars.map(ns => (
+                  <Pressable
+                    key={ns.id}
+                    style={[styles.nsTab, ns.id === northStar.id && styles.nsTabActive]}
+                    onPress={() => ns.id !== northStar.id && switchNorthStar(ns)}
+                  >
+                    <Text
+                      style={[styles.nsTabText, ns.id === northStar.id && styles.nsTabTextActive]}
+                      numberOfLines={1}
+                    >
+                      {ns.goal.length > 22 ? ns.goal.slice(0, 22) + '…' : ns.goal}
+                    </Text>
+                  </Pressable>
+                ))}
+                <Pressable style={styles.nsAddBtn} onPress={() => router.push('/onboarding')}>
+                  <Text style={styles.nsAddBtnText}>+ New Goal</Text>
+                </Pressable>
+              </ScrollView>
+            )}
+
+            {/* ── North Star card ─────────────────────────────────────────── */}
             <View style={styles.nsCard}>
-              {/* Top row: label + edit */}
               <View style={styles.nsCardHeader}>
                 <Text style={styles.nsLabel}>YOUR NORTH STAR</Text>
                 <Pressable style={styles.editBtn} onPress={openEdit}>
@@ -236,15 +279,10 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
 
-              {/* Goal vision image left + goal text right */}
               <View style={styles.nsGoalRow}>
                 <View style={styles.goalImageContainer}>
                   {goalImage ? (
-                    <Image
-                      source={{ uri: goalImage }}
-                      style={styles.goalImage}
-                      resizeMode="cover"
-                    />
+                    <Image source={{ uri: goalImage }} style={styles.goalImage} resizeMode="cover" />
                   ) : (
                     <View style={styles.goalImagePlaceholder}>
                       <Text style={styles.goalImagePlaceholderText}>✦</Text>
@@ -257,7 +295,6 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-              {/* Target date */}
               <Pressable style={styles.dateRow} onPress={() => setShowDatePicker(true)}>
                 <Text style={styles.dateIcon}>◎</Text>
                 <Text style={styles.dateText}>
@@ -276,32 +313,34 @@ export default function HomeScreen() {
 
               <View style={styles.cardDivider} />
               <Pressable onPress={handleReset}>
-                <Text style={styles.resetText}>Reset North Star</Text>
+                <Text style={styles.resetText}>
+                  {allNorthStars.length > 1 ? 'Remove this North Star' : 'Reset North Star'}
+                </Text>
               </Pressable>
             </View>
 
-            {/* Lock In / Current Focus */}
+            {/* ── Focus Mode ──────────────────────────────────────────────── */}
             {lockedIn ? (
               <Pressable style={styles.lockInCardWrapper} onPress={() => router.push('/plan')}>
-              <LinearGradient
-                colors={gradients.focus}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.lockInCard}
-              >
-                <Text style={styles.lockInLabel}>◎  FOCUS MODE</Text>
-                <Text style={styles.lockInTitle}>{lockedIn.title}</Text>
-                {lockedIn.description ? (
-                  <Text style={styles.lockInDesc}>{lockedIn.description}</Text>
-                ) : null}
-                <View style={styles.lockInRow}>
-                  <Text style={styles.lockInMeta}>
-                    {lockedIn.tasks.filter(t => t.completed).length} of {lockedIn.tasks.length} tasks done
-                    {milestones.length > 1 ? `  ·  ${milestones.length - 1} step${milestones.length > 2 ? 's' : ''} on hold` : ''}
-                  </Text>
-                  <Text style={styles.lockInView}>Go to plan →</Text>
-                </View>
-              </LinearGradient>
+                <LinearGradient
+                  colors={gradients.focus}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.lockInCard}
+                >
+                  <Text style={styles.lockInLabel}>◎  FOCUS MODE</Text>
+                  <Text style={styles.lockInTitle}>{lockedIn.title}</Text>
+                  {lockedIn.description ? (
+                    <Text style={styles.lockInDesc}>{lockedIn.description}</Text>
+                  ) : null}
+                  <View style={styles.lockInRow}>
+                    <Text style={styles.lockInMeta}>
+                      {lockedIn.tasks.filter(t => t.completed).length} of {lockedIn.tasks.length} tasks done
+                      {milestones.length > 1 ? `  ·  ${milestones.length - 1} step${milestones.length > 2 ? 's' : ''} on hold` : ''}
+                    </Text>
+                    <Text style={styles.lockInView}>Go to plan →</Text>
+                  </View>
+                </LinearGradient>
               </Pressable>
             ) : (
               <Pressable style={styles.lockInEmpty} onPress={() => router.push('/plan')}>
@@ -311,7 +350,7 @@ export default function HomeScreen() {
               </Pressable>
             )}
 
-            {/* Action buttons */}
+            {/* ── Action buttons ───────────────────────────────────────────── */}
             <View style={styles.actions}>
               <Pressable style={styles.actionBtn} onPress={() => router.push('/plan')}>
                 <Text style={styles.actionIcon}>📋</Text>
@@ -330,7 +369,6 @@ export default function HomeScreen() {
         ) : null}
       </ScrollView>
 
-      {/* Date picker */}
       <DatePickerModal
         visible={showDatePicker}
         current={northStar?.targetDate}
@@ -388,11 +426,7 @@ export default function HomeScreen() {
       {/* Splash overlay */}
       {splashVisible && (
         <Animated.View style={[styles.splash, { opacity: splashOpacity }]} pointerEvents="none">
-          <Image
-            source={require('../assets/north_star_logo.png')}
-            style={styles.splashLogo}
-            resizeMode="contain"
-          />
+          <Image source={require('../assets/north_star_logo.png')} style={styles.splashLogo} resizeMode="contain" />
           <View style={styles.splashQuoteBlock}>
             <BullseyeArrow size={42} color="#C9884A" />
             <Text style={styles.splashQuote}>A goal without a plan is just a dream.</Text>
@@ -409,20 +443,33 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   logoSpin: { width: 200, height: 200, opacity: 0.8 },
 
-  onboarding: { alignItems: 'center', paddingTop: spacing.xxl, paddingHorizontal: spacing.md },
-  onboardingHero: {
-    width: 200,
-    height: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
+  // North Star switcher
+  nsSwitcher: { flexGrow: 0, marginBottom: spacing.md },
+  nsSwitcherContent: { gap: spacing.xs, flexDirection: 'row', alignItems: 'center' },
+  nsTab: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+    maxWidth: 200,
   },
-  logoHero: { width: 200, height: 200 },
-  headline: { color: colors.text, fontSize: 32, fontWeight: '800', textAlign: 'center', lineHeight: 40, marginBottom: spacing.md },
-  sub: { color: colors.muted, fontSize: 15, textAlign: 'center', lineHeight: 23, marginBottom: spacing.xl },
-  primaryBtnWrapper: { borderRadius: radius.full, overflow: 'hidden' },
-  primaryBtn: { paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radius.full, alignItems: 'center' },
-  primaryBtnText: { color: colors.bg, fontWeight: '700', fontSize: 16 },
+  nsTabActive: {
+    backgroundColor: colors.primaryDim,
+    borderColor: colors.primary + '55',
+  },
+  nsTabText: { color: colors.muted, fontSize: 13, fontWeight: '600' },
+  nsTabTextActive: { color: colors.primary },
+  nsAddBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.blue + '55',
+    backgroundColor: colors.card,
+  },
+  nsAddBtnText: { color: colors.blue, fontSize: 13, fontWeight: '600' },
 
   nsCard: { backgroundColor: colors.card, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.cardBorder, marginBottom: spacing.lg },
   nsCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
@@ -449,12 +496,8 @@ const styles = StyleSheet.create({
   cardDivider: { height: 1, backgroundColor: colors.cardBorder, marginVertical: spacing.md },
   resetText: { color: colors.danger, fontSize: 13, textAlign: 'center' },
 
-  // Focus Mode card
   lockInCardWrapper: { borderRadius: radius.xl, marginBottom: spacing.lg, overflow: 'hidden' },
-  lockInCard: {
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-  },
+  lockInCard: { borderRadius: radius.xl, padding: spacing.lg },
   lockInLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: spacing.sm },
   lockInTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 28, marginBottom: spacing.xs },
   lockInDesc: { color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 20, marginBottom: spacing.sm },
@@ -463,15 +506,8 @@ const styles = StyleSheet.create({
   lockInView: { color: colors.primary, fontSize: 13, fontWeight: '700' },
 
   lockInEmpty: {
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.cardBorder,
-    borderStyle: 'dashed',
-    gap: spacing.xs,
+    backgroundColor: colors.card, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.lg,
+    alignItems: 'center', borderWidth: 2, borderColor: colors.cardBorder, borderStyle: 'dashed', gap: spacing.xs,
   },
   lockInEmptyIcon: { fontSize: 28, color: colors.primary, marginBottom: spacing.xs },
   actionIconTeal: { color: colors.primary },
@@ -497,31 +533,12 @@ const styles = StyleSheet.create({
   saveBtnDisabled: { opacity: 0.4 },
   saveText: { color: colors.bg, fontWeight: '700', fontSize: 15 },
 
-  // Splash
   splash: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: '18%',
-    zIndex: 100,
-    gap: spacing.lg,
+    backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'flex-start',
+    paddingTop: '18%', zIndex: 100, gap: spacing.lg,
   },
-  splashLogo: {
-    width: 140,
-    height: 140,
-  },
-  splashQuoteBlock: {
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    gap: spacing.md,
-  },
-  splashQuote: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '600',
-    lineHeight: 26,
-    textAlign: 'center',
-    letterSpacing: 0.2,
-  },
+  splashLogo: { width: 140, height: 140 },
+  splashQuoteBlock: { alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md },
+  splashQuote: { color: colors.text, fontSize: 17, fontWeight: '600', lineHeight: 26, textAlign: 'center', letterSpacing: 0.2 },
 });

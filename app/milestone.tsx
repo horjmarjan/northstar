@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getMilestones, saveMilestones } from '../lib/storage';
+import { getMilestones, saveMilestones, getActiveNorthStarId } from '../lib/storage';
 import { Milestone, Task } from '../lib/types';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -18,6 +18,7 @@ export default function MilestoneDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [milestone, setMilestone] = useState<Milestone | null>(null);
   const [allMilestones, setAllMilestones] = useState<Milestone[]>([]);
+  const [nsId, setNsId] = useState<string>('');
   const [titleDraft, setTitleDraft] = useState('');
   const [notesDraft, setNotesDraft] = useState('');
   const [saved, setSaved] = useState(false);
@@ -31,7 +32,10 @@ export default function MilestoneDetailScreen() {
   }, [id]);
 
   const load = async () => {
-    const ms = await getMilestones();
+    const activeNsId = await getActiveNorthStarId();
+    const resolvedNsId = activeNsId ?? '';
+    setNsId(resolvedNsId);
+    const ms = await getMilestones(resolvedNsId);
     setAllMilestones(ms);
     const m = ms.find(m => m.id === id);
     if (m) {
@@ -60,7 +64,7 @@ export default function MilestoneDetailScreen() {
       completed: updatedTasks.length > 0 ? updatedTasks.every(t => t.completed) : milestone.completed,
     };
     const updated = allMilestones.map(m => m.id === milestone.id ? updatedMilestone : m);
-    await saveMilestones(updated);
+    await saveMilestones(nsId, updated);
     setAllMilestones(updated);
     setMilestone(updatedMilestone);
     setSaved(true);
@@ -79,7 +83,7 @@ export default function MilestoneDetailScreen() {
     const updated = allMilestones.map(m => m.id === milestone.id ? updatedMilestone : m);
     setMilestone(updatedMilestone);
     setAllMilestones(updated);
-    await saveMilestones(updated);
+    await saveMilestones(nsId, updated);
     setSaved(true);
   };
 

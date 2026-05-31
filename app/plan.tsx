@@ -14,6 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { getMilestones, saveMilestones, getNorthStar, saveNorthStar, getProfileImage, getGoals, saveGoals } from '../lib/storage';
+import { getToken } from '../lib/auth';
 import { Goal, Milestone, NorthStar } from '../lib/types';
 import { MilestoneCard } from '../components/MilestoneCard';
 import { colors, gradients, radius, spacing } from '../lib/theme';
@@ -34,14 +35,15 @@ export default function PlanScreen() {
   useEffect(() => { load(); }, []);
 
   const load = async () => {
-    const [ns, ms, img, gs] = await Promise.all([
-      getNorthStar(), getMilestones(), getProfileImage(), getGoals(),
-    ]);
+    const [ns, img] = await Promise.all([getNorthStar(), getProfileImage()]);
     setNorthStar(ns);
     setProfileImage(img);
+    if (!ns) return;
+
+    const [ms, gs] = await Promise.all([getMilestones(ns.id), getGoals(ns.id)]);
 
     // Auto-migrate: if no goals exist, create a default one and assign all milestones to it
-    if (gs.length === 0 && ns) {
+    if (gs.length === 0) {
       const defaultGoal: Goal = {
         id: `goal_${Date.now()}`,
         northStarId: ns.id,
@@ -49,8 +51,8 @@ export default function PlanScreen() {
         order: 0,
       };
       const migratedMs = ms.map(m => ({ ...m, goalId: defaultGoal.id }));
-      await saveGoals([defaultGoal]);
-      await saveMilestones(migratedMs);
+      await saveGoals(ns.id, [defaultGoal]);
+      await saveMilestones(ns.id, migratedMs);
       setGoals([defaultGoal]);
       setMilestones(migratedMs);
       setSelectedGoalId(defaultGoal.id);
@@ -62,9 +64,10 @@ export default function PlanScreen() {
   };
 
   const save = async (updated: Milestone[]) => {
+    if (!northStar) return;
     const reordered = updated.map((m, i) => ({ ...m, order: i }));
     setMilestones(reordered);
-    await saveMilestones(reordered);
+    await saveMilestones(northStar.id, reordered);
   };
 
   // Milestones for the currently selected Goal tab
@@ -81,23 +84,24 @@ export default function PlanScreen() {
     };
     const updated = [...goals, newGoal];
     setGoals(updated);
-    await saveGoals(updated);
+    await saveGoals(northStar.id, updated);
     setSelectedGoalId(newGoal.id);
-    // Start editing title immediately
     setEditingGoalId(newGoal.id);
     setGoalTitleDraft(newGoal.title);
   };
 
   const renameGoal = async (goalId: string, title: string) => {
+    if (!northStar) return;
     const trimmed = title.trim();
     if (!trimmed) return;
     const updated = goals.map(g => g.id === goalId ? { ...g, title: trimmed } : g);
     setGoals(updated);
-    await saveGoals(updated);
+    await saveGoals(northStar.id, updated);
     setEditingGoalId(null);
   };
 
   const deleteGoal = (goalId: string) => {
+    if (!northStar) return;
     if (goals.length <= 1) {
       Alert.alert('Cannot delete', 'You need at least one Goal tab.');
       return;
@@ -108,8 +112,8 @@ export default function PlanScreen() {
         text: 'Delete', style: 'destructive', onPress: async () => {
           const updatedGoals = goals.filter(g => g.id !== goalId);
           const updatedMs = milestones.filter(m => m.goalId !== goalId);
-          await saveGoals(updatedGoals);
-          await saveMilestones(updatedMs);
+          await saveGoals(northStar.id, updatedGoals);
+          await saveMilestones(northStar.id, updatedMs);
           setGoals(updatedGoals);
           setMilestones(updatedMs);
           setSelectedGoalId(updatedGoals[0]?.id ?? '');
@@ -196,9 +200,13 @@ export default function PlanScreen() {
     let tasks: any[] = [];
     if (generate && northStar) {
       try {
+        const token = getToken();
         const res = await fetch(`${API}/api/generate-plan`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             goal: northStar.goal,
             why: `This is a sub-goal under "${milestone?.title}": ${title}`,
@@ -254,9 +262,13 @@ export default function PlanScreen() {
     if (!newStepTitle.trim()) return;
     setAddingStep(true);
     try {
+      const token = getToken();
       const res = await fetch(`${API}/api/generate-plan`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           goal: northStar?.goal ?? '',
           why: northStar?.why ?? '',

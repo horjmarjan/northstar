@@ -15,6 +15,7 @@ import { getSupporters, saveSupporters, getNorthStar } from '../lib/storage';
 import { Supporter, NorthStar } from '../lib/types';
 import { colors, radius, spacing } from '../lib/theme';
 import { API } from '../lib/apiUrl';
+import { getToken } from '../lib/auth';
 
 function formatPhone(raw: string): string {
   const digits = raw.replace(/\D/g, '');
@@ -37,12 +38,15 @@ export default function SupportersScreen() {
   }, []);
 
   const load = async () => {
-    const [ns, sup] = await Promise.all([getNorthStar(), getSupporters()]);
+    const ns = await getNorthStar();
     setNorthStar(ns);
+    if (!ns) return;
+    const sup = await getSupporters(ns.id);
     setSupporters(sup);
   };
 
   const addSupporter = async () => {
+    if (!northStar) return;
     if (!name.trim() || !phone.trim()) {
       Alert.alert('Required', 'Name and phone number are required.');
       return;
@@ -54,20 +58,21 @@ export default function SupportersScreen() {
     }
     const newSupporter: Supporter = {
       id: `sup_${Date.now()}`,
-      northStarId: northStar?.id ?? '',
+      northStarId: northStar.id,
       name: name.trim(),
       phone: formatted,
       relationship: relationship.trim() || 'Friend',
     };
     const updated = [...supporters, newSupporter];
     setSupporters(updated);
-    await saveSupporters(updated);
+    await saveSupporters(northStar.id, updated);
     setName('');
     setPhone('');
     setRelationship('');
   };
 
   const removeSupporter = (id: string) => {
+    if (!northStar) return;
     Alert.alert('Remove supporter?', "They won't receive future check-ins.", [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -76,7 +81,7 @@ export default function SupportersScreen() {
         onPress: async () => {
           const updated = supporters.filter((s) => s.id !== id);
           setSupporters(updated);
-          await saveSupporters(updated);
+          await saveSupporters(northStar.id, updated);
         },
       },
     ]);
@@ -89,9 +94,13 @@ export default function SupportersScreen() {
     }
     setSendingId(supporter.id);
     try {
+      const token = getToken();
       const res = await fetch(`${API}/api/send-checkin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           goal: northStar.goal,
           supporterName: supporter.name,

@@ -2,15 +2,6 @@ import { NorthStar, Milestone, Supporter, Goal } from './types';
 import { API } from './apiUrl';
 import { getToken } from './auth';
 
-const KEYS = {
-  NORTH_STAR:   'northstar:goal',
-  MILESTONES:   'northstar:milestones',
-  SUPPORTERS:   'northstar:supporters',
-  PROFILE_IMAGE:'northstar:profileImage',
-  GOALS:        'northstar:goals',
-  GOAL_IMAGE:   'northstar:goalImage',
-};
-
 function authHeaders(): Record<string, string> {
   const token = getToken();
   return token
@@ -29,7 +20,7 @@ function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Respo
 
 async function getItem<T>(key: string): Promise<T | null> {
   try {
-    const res  = await fetchWithTimeout(
+    const res = await fetchWithTimeout(
       `${API}/api/storage/${encodeURIComponent(key)}`,
       { headers: authHeaders() }
     );
@@ -52,23 +43,138 @@ async function setItem(key: string, value: unknown): Promise<void> {
   }
 }
 
-export async function getNorthStar(): Promise<NorthStar | null>          { return getItem<NorthStar>(KEYS.NORTH_STAR); }
-export async function saveNorthStar(ns: NorthStar): Promise<void>        { await setItem(KEYS.NORTH_STAR, ns); }
+// ─── Multi-North-Star list ─────────────────────────────────────────────────
 
-export async function getMilestones(): Promise<Milestone[]>              { return (await getItem<Milestone[]>(KEYS.MILESTONES)) ?? []; }
-export async function saveMilestones(ms: Milestone[]): Promise<void>     { await setItem(KEYS.MILESTONES, ms); }
+export async function getNorthStars(): Promise<NorthStar[]> {
+  let list = await getItem<NorthStar[]>('northstar:list');
+  if (list !== null) return list;
 
-export async function getGoals(): Promise<Goal[]>                        { return (await getItem<Goal[]>(KEYS.GOALS)) ?? []; }
-export async function saveGoals(goals: Goal[]): Promise<void>            { await setItem(KEYS.GOALS, goals); }
+  // One-time migration: convert old single-NS storage to list format
+  const old = await getItem<NorthStar>('northstar:goal');
+  if (!old) return [];
 
-export async function getSupporters(): Promise<Supporter[]>              { return (await getItem<Supporter[]>(KEYS.SUPPORTERS)) ?? []; }
-export async function saveSupporters(s: Supporter[]): Promise<void>      { await setItem(KEYS.SUPPORTERS, s); }
+  const [oldMs, oldGs, oldSup, oldImg] = await Promise.all([
+    getItem<Milestone[]>('northstar:milestones'),
+    getItem<Goal[]>('northstar:goals'),
+    getItem<Supporter[]>('northstar:supporters'),
+    getItem<string>('northstar:goalImage'),
+  ]);
 
-export async function getProfileImage(): Promise<string | null>          { return getItem<string>(KEYS.PROFILE_IMAGE); }
-export async function saveProfileImage(dataUri: string): Promise<void>   { await setItem(KEYS.PROFILE_IMAGE, dataUri); }
+  list = [old];
+  await Promise.all([
+    setItem('northstar:list', list),
+    setItem('northstar:activeId', old.id),
+    oldMs  ? setItem(`northstar:milestones:${old.id}`, oldMs)  : Promise.resolve(),
+    oldGs  ? setItem(`northstar:goals:${old.id}`, oldGs)       : Promise.resolve(),
+    oldSup ? setItem(`northstar:supporters:${old.id}`, oldSup) : Promise.resolve(),
+    oldImg ? setItem(`northstar:goalImage:${old.id}`, oldImg)  : Promise.resolve(),
+  ]);
 
-export async function getGoalImage(): Promise<string | null>             { return getItem<string>(KEYS.GOAL_IMAGE); }
-export async function saveGoalImage(url: string): Promise<void>          { await setItem(KEYS.GOAL_IMAGE, url); }
+  return list;
+}
+
+export async function saveNorthStars(list: NorthStar[]): Promise<void> {
+  await setItem('northstar:list', list);
+}
+
+export async function getActiveNorthStarId(): Promise<string | null> {
+  const id = await getItem<string>('northstar:activeId');
+  if (id) return id;
+  const list = await getNorthStars();
+  if (list.length > 0) {
+    await setItem('northstar:activeId', list[0].id);
+    return list[0].id;
+  }
+  return null;
+}
+
+export async function setActiveNorthStarId(id: string): Promise<void> {
+  await setItem('northstar:activeId', id);
+}
+
+// Convenience: returns the active NorthStar object
+export async function getNorthStar(): Promise<NorthStar | null> {
+  const [list, activeId] = await Promise.all([getNorthStars(), getItem<string>('northstar:activeId')]);
+  if (list.length === 0) return null;
+  return list.find(ns => ns.id === activeId) ?? list[0];
+}
+
+// Upsert a NorthStar into the list (adds if new id, updates if exists)
+export async function saveNorthStar(ns: NorthStar): Promise<void> {
+  const list = await getNorthStars();
+  const idx = list.findIndex(n => n.id === ns.id);
+  if (idx >= 0) list[idx] = ns; else list.push(ns);
+  await saveNorthStars(list);
+}
+
+// Add a brand-new NorthStar and make it active
+export async function addNorthStar(ns: NorthStar): Promise<void> {
+  const list = await getNorthStars();
+  list.push(ns);
+  await Promise.all([
+    saveNorthStars(list),
+    setItem('northstar:activeId', ns.id),
+  ]);
+}
+
+// ─── Per-North-Star data (all keyed by nsId) ───────────────────────────────
+
+export async function getMilestones(nsId: string): Promise<Milestone[]> {
+  return (await getItem<Milestone[]>(`northstar:milestones:${nsId}`)) ?? [];
+}
+export async function saveMilestones(nsId: string, ms: Milestone[]): Promise<void> {
+  await setItem(`northstar:milestones:${nsId}`, ms);
+}
+
+export async function getGoals(nsId: string): Promise<Goal[]> {
+  return (await getItem<Goal[]>(`northstar:goals:${nsId}`)) ?? [];
+}
+export async function saveGoals(nsId: string, goals: Goal[]): Promise<void> {
+  await setItem(`northstar:goals:${nsId}`, goals);
+}
+
+export async function getSupporters(nsId: string): Promise<Supporter[]> {
+  return (await getItem<Supporter[]>(`northstar:supporters:${nsId}`)) ?? [];
+}
+export async function saveSupporters(nsId: string, s: Supporter[]): Promise<void> {
+  await setItem(`northstar:supporters:${nsId}`, s);
+}
+
+export async function getGoalImage(nsId: string): Promise<string | null> {
+  return getItem<string>(`northstar:goalImage:${nsId}`);
+}
+export async function saveGoalImage(nsId: string, url: string): Promise<void> {
+  await setItem(`northstar:goalImage:${nsId}`, url);
+}
+
+// ─── Shared (profile image is account-wide, not per-NS) ───────────────────
+
+export async function getProfileImage(): Promise<string | null> {
+  return getItem<string>('northstar:profileImage');
+}
+export async function saveProfileImage(dataUri: string): Promise<void> {
+  await setItem('northstar:profileImage', dataUri);
+}
+
+// ─── Delete a North Star and its associated data ───────────────────────────
+
+// Removes the NS from the list, clears its keyed data, returns the next active id (or null).
+export async function deleteNorthStarAndData(nsId: string): Promise<string | null> {
+  const list = await getNorthStars();
+  const remaining = list.filter(n => n.id !== nsId);
+  const nextId = remaining[0]?.id ?? null;
+  await Promise.all([
+    saveNorthStars(remaining),
+    setItem('northstar:activeId', nextId),
+    setItem(`northstar:milestones:${nsId}`, null),
+    setItem(`northstar:goals:${nsId}`, null),
+    setItem(`northstar:supporters:${nsId}`, null),
+    setItem(`northstar:goalImage:${nsId}`, null),
+  ]);
+  return nextId;
+}
+
+// ─── Full account wipe ─────────────────────────────────────────────────────
 
 export async function clearAll(): Promise<void> {
   const token = getToken();

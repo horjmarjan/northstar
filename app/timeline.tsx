@@ -16,9 +16,12 @@ export default function TimelineScreen() {
 
   useEffect(() => {
     (async () => {
-      const [ns, ms] = await Promise.all([getNorthStar(), getMilestones()]);
+      const ns = await getNorthStar();
       setNorthStar(ns);
-      setMilestones(ms);
+      if (ns) {
+        const ms = await getMilestones(ns.id);
+        setMilestones(ms);
+      }
     })();
   }, []);
 

@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getMilestones, saveMilestones, getNorthStar } from '../lib/storage';
+import { getMilestones, saveMilestones, getActiveNorthStarId } from '../lib/storage';
 import { Milestone, SubGoal, Task } from '../lib/types';
 import { TaskItem } from '../components/TaskItem';
 import { colors, radius, spacing } from '../lib/theme';
@@ -17,6 +17,7 @@ import { colors, radius, spacing } from '../lib/theme';
 export default function SubGoalScreen() {
   const { milestoneId, subGoalId } = useLocalSearchParams<{ milestoneId: string; subGoalId: string }>();
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [nsId, setNsId] = useState<string>('');
   const [parentMilestone, setParentMilestone] = useState<Milestone | null>(null);
   const [subGoal, setSubGoal] = useState<SubGoal | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -27,7 +28,9 @@ export default function SubGoalScreen() {
   useEffect(() => { load(); }, []);
 
   const load = async () => {
-    const ms = await getMilestones();
+    const activeNsId = (await getActiveNorthStarId()) ?? '';
+    setNsId(activeNsId);
+    const ms = await getMilestones(activeNsId);
     setMilestones(ms);
     const parent = ms.find((m) => m.id === milestoneId) ?? null;
     setParentMilestone(parent);
@@ -43,7 +46,7 @@ export default function SubGoalScreen() {
       return { ...m, subGoals: (m.subGoals ?? []).map((s) => s.id === subGoalId ? updated : s) };
     });
     setMilestones(updatedMilestones);
-    await saveMilestones(updatedMilestones);
+    await saveMilestones(nsId, updatedMilestones);
   };
 
   const commitTitle = () => {
@@ -103,7 +106,7 @@ export default function SubGoalScreen() {
             if (m.id !== milestoneId) return m;
             return { ...m, subGoals: (m.subGoals ?? []).filter((s) => s.id !== subGoalId) };
           });
-          await saveMilestones(updated);
+          await saveMilestones(nsId, updated);
           router.back();
         },
       },
@@ -134,7 +137,7 @@ export default function SubGoalScreen() {
               if (m.id !== milestoneId) return m;
               return { ...m, subGoals: (m.subGoals ?? []).filter((s) => s.id !== subGoalId) };
             });
-            await saveMilestones([...pruned, newMilestone]);
+            await saveMilestones(nsId, [...pruned, newMilestone]);
             router.replace('/plan');
           },
         },

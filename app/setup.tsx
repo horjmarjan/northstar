@@ -14,7 +14,8 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
-import { saveNorthStar, saveMilestones } from '../lib/storage';
+import { addNorthStar, saveMilestones } from '../lib/storage';
+import { getToken } from '../lib/auth';
 import { NorthStar } from '../lib/types';
 import { colors, gradients, radius, spacing } from '../lib/theme';
 import { API } from '../lib/apiUrl';
@@ -59,9 +60,13 @@ export default function SetupScreen() {
 
     setLoading(true);
     try {
+      const token = getToken();
       const res = await fetch(`${API}/api/generate-plan`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           goal: goal.trim(),
           why: why.trim(),
@@ -83,8 +88,8 @@ export default function SetupScreen() {
         createdAt: new Date().toISOString(),
       };
 
-      await saveNorthStar(ns);
-      await saveMilestones(milestones);
+      await addNorthStar(ns);
+      await saveMilestones(ns.id, milestones);
       router.replace('/plan');
     } catch (err: any) {
       Alert.alert('Error', err.message);
