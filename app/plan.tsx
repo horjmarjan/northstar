@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   goalBannerBackLabel: { color: colors.primary, fontSize: 10, fontWeight: '700' },
 
   tabBar: { borderBottomWidth: 1, borderBottomColor: colors.cardBorder, backgroundColor: colors.card, flexGrow: 0 },
-  tabBarContent: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, gap: spacing.xs, flexDirection: 'row', alignItems: 'center' },
+  tabBarContent: { paddingHorizontal: spacing.sm, paddingVertical: spacing.md, gap: spacing.xs, flexDirection: 'row', alignItems: 'center' },
   tab: {
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     borderRadius: radius.full, borderWidth: 1, borderColor: 'transparent', maxWidth: 180,
