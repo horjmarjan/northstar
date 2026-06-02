@@ -13,54 +13,46 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import { getMilestones, saveMilestones, getNorthStar, saveNorthStar, getProfileImage, getGoals, saveGoals } from '../lib/storage';
+import {
+  getMilestones, saveMilestones,
+  getNorthStars, getActiveNorthStarId, setActiveNorthStarId,
+  saveNorthStar, getProfileImage,
+} from '../lib/storage';
 import { getToken } from '../lib/auth';
-import { Goal, Milestone, NorthStar } from '../lib/types';
+import { Milestone, NorthStar } from '../lib/types';
 import { MilestoneCard } from '../components/MilestoneCard';
 import { colors, gradients, radius, spacing } from '../lib/theme';
 import { API } from '../lib/apiUrl';
 
 export default function PlanScreen() {
+  const [allNorthStars, setAllNorthStars] = useState<NorthStar[]>([]);
   const [northStar, setNorthStar] = useState<NorthStar | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [selectedGoalId, setSelectedGoalId] = useState<string>('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newStepTitle, setNewStepTitle] = useState('');
   const [addingStep, setAddingStep] = useState(false);
-  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
-  const [goalTitleDraft, setGoalTitleDraft] = useState('');
 
   useFocusEffect(useCallback(() => { load(); }, []));
 
   const load = async () => {
-    const [ns, img] = await Promise.all([getNorthStar(), getProfileImage()]);
-    setNorthStar(ns);
+    const [nsList, activeId, img] = await Promise.all([
+      getNorthStars(), getActiveNorthStarId(), getProfileImage(),
+    ]);
+    setAllNorthStars(nsList);
     setProfileImage(img);
-    if (!ns) return;
+    if (nsList.length === 0) return;
+    const ns = nsList.find(n => n.id === activeId) ?? nsList[0];
+    setNorthStar(ns);
+    const ms = await getMilestones(ns.id);
+    setMilestones(ms);
+  };
 
-    const [ms, gs] = await Promise.all([getMilestones(ns.id), getGoals(ns.id)]);
-
-    // Auto-migrate: if no goals exist, create a default one and assign all milestones to it
-    if (gs.length === 0) {
-      const defaultGoal: Goal = {
-        id: `goal_${Date.now()}`,
-        northStarId: ns.id,
-        title: 'My Goals',
-        order: 0,
-      };
-      const migratedMs = ms.map(m => ({ ...m, goalId: defaultGoal.id }));
-      await saveGoals(ns.id, [defaultGoal]);
-      await saveMilestones(ns.id, migratedMs);
-      setGoals([defaultGoal]);
-      setMilestones(migratedMs);
-      setSelectedGoalId(defaultGoal.id);
-    } else {
-      setGoals(gs);
-      setMilestones(ms);
-      setSelectedGoalId(prev => prev || gs[0]?.id || '');
-    }
+  const switchNorthStar = async (ns: NorthStar) => {
+    await setActiveNorthStarId(ns.id);
+    setNorthStar(ns);
+    const ms = await getMilestones(ns.id);
+    setMilestones(ms);
   };
 
   const save = async (updated: Milestone[]) => {
@@ -70,77 +62,22 @@ export default function PlanScreen() {
     await saveMilestones(northStar.id, reordered);
   };
 
-  // Milestones for the currently selected Goal tab
-  const filteredMilestones = milestones.filter(m => m.goalId === selectedGoalId);
+  // ── Milestone operations ───────────────────────────────────────────────────
 
-  // --- Goal tab management ---
-  const addGoal = async () => {
-    if (!northStar || goals.length >= 5) return;
-    const newGoal: Goal = {
-      id: `goal_${Date.now()}`,
-      northStarId: northStar.id,
-      title: `Goal ${goals.length + 1}`,
-      order: goals.length,
-    };
-    const updated = [...goals, newGoal];
-    setGoals(updated);
-    await saveGoals(northStar.id, updated);
-    setSelectedGoalId(newGoal.id);
-    setEditingGoalId(newGoal.id);
-    setGoalTitleDraft(newGoal.title);
-  };
-
-  const renameGoal = async (goalId: string, title: string) => {
-    if (!northStar) return;
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    const updated = goals.map(g => g.id === goalId ? { ...g, title: trimmed } : g);
-    setGoals(updated);
-    await saveGoals(northStar.id, updated);
-    setEditingGoalId(null);
-  };
-
-  const deleteGoal = (goalId: string) => {
-    if (!northStar) return;
-    if (goals.length <= 1) {
-      Alert.alert('Cannot delete', 'You need at least one Goal tab.');
-      return;
-    }
-    Alert.alert('Delete Goal?', 'This will also delete all mini-goals in this tab.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          const updatedGoals = goals.filter(g => g.id !== goalId);
-          const updatedMs = milestones.filter(m => m.goalId !== goalId);
-          await saveGoals(northStar.id, updatedGoals);
-          await saveMilestones(northStar.id, updatedMs);
-          setGoals(updatedGoals);
-          setMilestones(updatedMs);
-          setSelectedGoalId(updatedGoals[0]?.id ?? '');
-        },
-      },
-    ]);
-  };
-
-  // --- Milestone operations (all operate on full milestones array) ---
   const moveUp = (milestoneId: string) => {
-    const filtered = milestones.filter(m => m.goalId === selectedGoalId);
-    const idx = filtered.findIndex(m => m.id === milestoneId);
+    const idx = milestones.findIndex(m => m.id === milestoneId);
     if (idx <= 0) return;
-    const swapped = [...filtered];
+    const swapped = [...milestones];
     [swapped[idx - 1], swapped[idx]] = [swapped[idx], swapped[idx - 1]];
-    const others = milestones.filter(m => m.goalId !== selectedGoalId);
-    save([...others, ...swapped]);
+    save(swapped);
   };
 
   const moveDown = (milestoneId: string) => {
-    const filtered = milestones.filter(m => m.goalId === selectedGoalId);
-    const idx = filtered.findIndex(m => m.id === milestoneId);
-    if (idx >= filtered.length - 1) return;
-    const swapped = [...filtered];
+    const idx = milestones.findIndex(m => m.id === milestoneId);
+    if (idx >= milestones.length - 1) return;
+    const swapped = [...milestones];
     [swapped[idx], swapped[idx + 1]] = [swapped[idx + 1], swapped[idx]];
-    const others = milestones.filter(m => m.goalId !== selectedGoalId);
-    save([...others, ...swapped]);
+    save(swapped);
   };
 
   const toggleTask = async (milestoneId: string, taskId: string) => {
@@ -234,7 +171,7 @@ export default function PlanScreen() {
     if (!sg) return;
     const newId = `m${Date.now()}`;
     const newMilestone: Milestone = {
-      id: newId, northStarId: northStar?.id ?? '', goalId: selectedGoalId,
+      id: newId, northStarId: northStar?.id ?? '',
       title: sg.title, description: '', order: milestones.length,
       completed: sg.tasks.length > 0 && sg.tasks.every(t => t.completed),
       tasks: sg.tasks.map(t => ({ ...t, milestoneId: newId })), subGoals: [],
@@ -281,8 +218,7 @@ export default function PlanScreen() {
         ...data.milestones[0],
         id: `m${Date.now()}`,
         northStarId: northStar?.id ?? '',
-        goalId: selectedGoalId,
-        order: filteredMilestones.length,
+        order: milestones.length,
       };
       await save([...milestones, newMilestone]);
       setShowAddModal(false);
@@ -299,10 +235,9 @@ export default function PlanScreen() {
     const newMilestone: Milestone = {
       id: `m${Date.now()}`,
       northStarId: northStar?.id ?? '',
-      goalId: selectedGoalId,
       title: newStepTitle.trim(),
       description: '',
-      order: filteredMilestones.length,
+      order: milestones.length,
       completed: false,
       tasks: [],
     };
@@ -313,15 +248,13 @@ export default function PlanScreen() {
 
   const allTasks = milestones.flatMap(m => m.tasks);
   const doneTasks = allTasks.filter(t => t.completed).length;
-  const tabTasks = filteredMilestones.flatMap(m => m.tasks);
-  const tabDone = tabTasks.filter(t => t.completed).length;
 
-  if (milestones.length === 0 && goals.length === 0) {
+  if (allNorthStars.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyText}>No plan yet. Set your North Star first.</Text>
-        <Pressable style={styles.emptyBtn} onPress={() => router.replace('/setup')}>
-          <Text style={styles.emptyBtnText}>Set North Star</Text>
+        <Text style={styles.emptyText}>No goals yet.</Text>
+        <Pressable style={styles.emptyBtn} onPress={() => router.replace('/onboarding')}>
+          <Text style={styles.emptyBtnText}>Add your first goal</Text>
         </Pressable>
       </View>
     );
@@ -352,71 +285,50 @@ export default function PlanScreen() {
         </Pressable>
       )}
 
-      {/* Goal tabs */}
+      {/* North Star switcher tabs */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.tabBar}
         contentContainerStyle={styles.tabBarContent}
       >
-        {goals.map(goal => (
+        {allNorthStars.map(ns => (
           <Pressable
-            key={goal.id}
-            style={[styles.tab, goal.id === selectedGoalId && styles.tabActive]}
-            onPress={() => setSelectedGoalId(goal.id)}
-            onLongPress={() => { setEditingGoalId(goal.id); setGoalTitleDraft(goal.title); }}
+            key={ns.id}
+            style={[styles.tab, ns.id === northStar?.id && styles.tabActive]}
+            onPress={() => ns.id !== northStar?.id && switchNorthStar(ns)}
           >
-            {editingGoalId === goal.id ? (
-              <TextInput
-                style={styles.tabEditInput}
-                value={goalTitleDraft}
-                onChangeText={setGoalTitleDraft}
-                onBlur={() => renameGoal(goal.id, goalTitleDraft)}
-                onSubmitEditing={() => renameGoal(goal.id, goalTitleDraft)}
-                autoFocus
-                maxLength={24}
-                selectTextOnFocus
-              />
-            ) : (
-              <Text style={[styles.tabText, goal.id === selectedGoalId && styles.tabTextActive]}>
-                {goal.title}
-              </Text>
-            )}
+            <Text
+              style={[styles.tabText, ns.id === northStar?.id && styles.tabTextActive]}
+              numberOfLines={1}
+            >
+              {ns.goal.length > 20 ? ns.goal.slice(0, 20) + '…' : ns.goal}
+            </Text>
           </Pressable>
         ))}
-        {goals.length < 5 && (
-          <Pressable style={styles.tabAdd} onPress={addGoal}>
-            <Text style={styles.tabAddText}>+ Add Goal</Text>
-          </Pressable>
-        )}
-        {goals.length > 1 && selectedGoalId && (
-          <Pressable
-            style={styles.tabDelete}
-            onPress={() => deleteGoal(selectedGoalId)}
-          >
-            <Text style={styles.tabDeleteText}>✕</Text>
-          </Pressable>
-        )}
+        <Pressable style={styles.tabAdd} onPress={() => router.push('/onboarding')}>
+          <Text style={styles.tabAddText}>+ Add Goal</Text>
+        </Pressable>
       </ScrollView>
 
       {/* Stats */}
       <View style={styles.statsRow}>
         <View style={styles.stat}>
-          <Text style={styles.statNum}>{filteredMilestones.length}</Text>
+          <Text style={styles.statNum}>{milestones.length}</Text>
           <Text style={styles.statLabel}>Mini-goals</Text>
         </View>
         <View style={styles.stat}>
-          <Text style={styles.statNum}>{tabTasks.length}</Text>
+          <Text style={styles.statNum}>{allTasks.length}</Text>
           <Text style={styles.statLabel}>Tasks</Text>
         </View>
         <View style={styles.stat}>
-          <Text style={[styles.statNum, { color: colors.success }]}>{tabDone}</Text>
+          <Text style={[styles.statNum, { color: colors.success }]}>{doneTasks}</Text>
           <Text style={styles.statLabel}>Done</Text>
         </View>
       </View>
 
       <View style={styles.hintRow}>
-        <Text style={styles.hint}>Long-press tab to rename  ·  tap ✎ to edit</Text>
+        <Text style={styles.hint}>Tap a goal above to switch  ·  tap ✎ to edit</Text>
         <Pressable style={styles.timelineBtn} onPress={() => router.push('/timeline')}>
           <Text style={styles.timelineBtnText}>◷ Timeline</Text>
         </Pressable>
@@ -448,18 +360,18 @@ export default function PlanScreen() {
       })()}
 
       <ScrollView contentContainerStyle={styles.listContent}>
-        {filteredMilestones.length === 0 && (
+        {milestones.length === 0 && (
           <View style={styles.emptyTab}>
-            <Text style={styles.emptyTabText}>No mini-goals yet in this goal.</Text>
+            <Text style={styles.emptyTabText}>No mini-goals yet for this goal.</Text>
             <Text style={styles.emptyTabSub}>Tap + to add one</Text>
           </View>
         )}
-        {filteredMilestones.map((m, i) => (
+        {milestones.map((m, i) => (
           <MilestoneCard
             key={m.id}
             milestone={m}
             index={i}
-            total={filteredMilestones.length}
+            total={milestones.length}
             onMoveUp={() => moveUp(m.id)}
             onMoveDown={() => moveDown(m.id)}
             onToggleTask={toggleTask}
@@ -561,46 +473,19 @@ const styles = StyleSheet.create({
   goalBannerBack: { color: colors.primary, fontSize: 20 },
   goalBannerBackLabel: { color: colors.primary, fontSize: 10, fontWeight: '700' },
 
-  // Goal tabs
-  tabBar: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    backgroundColor: colors.card,
-    flexGrow: 0,
-  },
+  tabBar: { borderBottomWidth: 1, borderBottomColor: colors.cardBorder, backgroundColor: colors.card, flexGrow: 0 },
   tabBarContent: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, gap: spacing.xs, flexDirection: 'row', alignItems: 'center' },
   tab: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: radius.full, borderWidth: 1, borderColor: 'transparent', maxWidth: 180,
   },
-  tabActive: {
-    backgroundColor: colors.primaryDim,
-    borderColor: colors.primary + '55',
-  },
+  tabActive: { backgroundColor: colors.primaryDim, borderColor: colors.primary + '55' },
   tabText: { color: colors.muted, fontSize: 13, fontWeight: '600' },
   tabTextActive: { color: colors.primary },
-  tabEditInput: {
-    color: colors.primary, fontSize: 13, fontWeight: '600',
-    minWidth: 60, maxWidth: 120,
-    borderBottomWidth: 1, borderBottomColor: colors.primary,
-    paddingVertical: 0,
-  },
-  tabAdd: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-  },
+  tabAdd: { paddingVertical: spacing.sm, paddingHorizontal: spacing.sm },
   tabAddText: { color: colors.blue, fontSize: 13, fontWeight: '600' },
-  tabDelete: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    marginLeft: spacing.xs,
-  },
-  tabDeleteText: { color: colors.danger, fontSize: 13 },
 
-  statsRow: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, paddingTop: spacing.md, paddingBottom: 0 },
+  statsRow: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, paddingBottom: 0 },
   stat: {
     flex: 1, backgroundColor: colors.card, borderRadius: radius.md,
     padding: spacing.sm, alignItems: 'center', borderWidth: 1, borderColor: colors.cardBorder,
