@@ -123,7 +123,7 @@ export default function SetupScreen() {
           style={styles.input}
           value={goal}
           onChangeText={setGoal}
-          placeholder="e.g. Move to Bali in January"
+          placeholder="e.g. Score your dream job..."
           placeholderTextColor={colors.muted}
           multiline
           maxLength={200}
