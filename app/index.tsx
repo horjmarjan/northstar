@@ -27,7 +27,7 @@ import {
   getGoalImage,
   saveGoalImage,
 } from '../lib/storage';
-import { isLoggedIn } from '../lib/auth';
+import { isLoggedIn, restoreSession } from '../lib/auth';
 import { NorthStar, Milestone } from '../lib/types';
 import { colors, gradients, spacing, radius } from '../lib/theme';
 import { DatePickerModal } from '../components/DatePickerModal';
@@ -111,6 +111,7 @@ export default function HomeScreen() {
   }, []));
 
   const loadData = async () => {
+    await restoreSession();
     if (!isLoggedIn()) {
       setLoading(false);
       router.replace('/login');

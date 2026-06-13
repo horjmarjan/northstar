@@ -1,13 +1,31 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API } from './apiUrl';
 
-// On web: persist session to localStorage so page refreshes don't log you out.
-// On native: keep in-memory (re-login on app restart is intentional).
 const isWeb = Platform.OS === 'web';
 
 let _token: string | null = isWeb ? (typeof localStorage !== 'undefined' ? localStorage.getItem('ns:token') : null) : null;
 let _username: string | null = isWeb ? (typeof localStorage !== 'undefined' ? localStorage.getItem('ns:username') : null) : null;
 let _userId: string | null = isWeb ? (typeof localStorage !== 'undefined' ? localStorage.getItem('ns:userId') : null) : null;
+
+// Promise that resolves once the native session has been restored from AsyncStorage.
+// On web it resolves immediately since localStorage is synchronous.
+let _sessionRestored: Promise<void>;
+if (isWeb) {
+  _sessionRestored = Promise.resolve();
+} else {
+  _sessionRestored = Promise.all([
+    AsyncStorage.getItem('ns:token'),
+    AsyncStorage.getItem('ns:userId'),
+    AsyncStorage.getItem('ns:username'),
+  ]).then(([t, u, n]) => {
+    if (t) _token = t;
+    if (u) _userId = u;
+    if (n) _username = n;
+  });
+}
+
+export function restoreSession(): Promise<void> { return _sessionRestored; }
 
 const AUTH_TIMEOUT_MS = 6000;
 
@@ -26,6 +44,10 @@ export function setSession(token: string, userId: string, username: string) {
     localStorage.setItem('ns:token', token);
     localStorage.setItem('ns:userId', userId);
     localStorage.setItem('ns:username', username);
+  } else {
+    AsyncStorage.setItem('ns:token', token);
+    AsyncStorage.setItem('ns:userId', userId);
+    AsyncStorage.setItem('ns:username', username);
   }
 }
 
@@ -37,6 +59,10 @@ export function clearSession() {
     localStorage.removeItem('ns:token');
     localStorage.removeItem('ns:userId');
     localStorage.removeItem('ns:username');
+  } else {
+    AsyncStorage.removeItem('ns:token');
+    AsyncStorage.removeItem('ns:userId');
+    AsyncStorage.removeItem('ns:username');
   }
 }
 
