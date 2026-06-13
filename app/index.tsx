@@ -111,33 +111,38 @@ export default function HomeScreen() {
   }, []));
 
   const loadData = async () => {
-    await restoreSession();
-    if (!isLoggedIn()) {
+    try {
+      await restoreSession();
+      if (!isLoggedIn()) {
+        setLoading(false);
+        router.replace('/login');
+        return;
+      }
+      const [nsList, activeId] = await Promise.all([getNorthStars(), getActiveNorthStarId()]);
+      setAllNorthStars(nsList);
+
+      if (nsList.length === 0) {
+        setLoading(false);
+        router.replace('/onboarding');
+        return;
+      }
+
+      const ns = nsList.find(n => n.id === activeId) ?? nsList[0];
+      setNorthStar(ns);
+
+      const [ms, cachedImg] = await Promise.all([getMilestones(ns.id), getGoalImage(ns.id)]);
+      setMilestones(ms);
+
+      if (cachedImg) {
+        setGoalImage(cachedImg);
+      } else if (ns.goal) {
+        fetchGoalImage(ns.id, ns.goal);
+      }
+    } catch (e: any) {
+      Alert.alert('Could not load data', e.message || 'Check your connection and try again.');
+    } finally {
       setLoading(false);
-      router.replace('/login');
-      return;
     }
-    const [nsList, activeId] = await Promise.all([getNorthStars(), getActiveNorthStarId()]);
-    setAllNorthStars(nsList);
-
-    if (nsList.length === 0) {
-      setLoading(false);
-      router.replace('/onboarding');
-      return;
-    }
-
-    const ns = nsList.find(n => n.id === activeId) ?? nsList[0];
-    setNorthStar(ns);
-
-    const [ms, cachedImg] = await Promise.all([getMilestones(ns.id), getGoalImage(ns.id)]);
-    setMilestones(ms);
-
-    if (cachedImg) {
-      setGoalImage(cachedImg);
-    } else if (ns.goal) {
-      fetchGoalImage(ns.id, ns.goal);
-    }
-    setLoading(false);
   };
 
   const switchNorthStar = async (ns: NorthStar) => {

@@ -9,7 +9,7 @@ function authHeaders(): Record<string, string> {
     : { 'Content-Type': 'application/json' };
 }
 
-const TIMEOUT_MS = 4000;
+const TIMEOUT_MS = 12000;
 
 function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
@@ -19,16 +19,13 @@ function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Respo
 }
 
 async function getItem<T>(key: string): Promise<T | null> {
-  try {
-    const res = await fetchWithTimeout(
-      `${API}/api/storage/${encodeURIComponent(key)}`,
-      { headers: authHeaders() }
-    );
-    const json = await res.json();
-    return json.value ?? null;
-  } catch {
-    return null;
-  }
+  const res = await fetchWithTimeout(
+    `${API}/api/storage/${encodeURIComponent(key)}`,
+    { headers: authHeaders() }
+  );
+  if (!res.ok) throw new Error(`Storage read failed: ${res.status}`);
+  const json = await res.json();
+  return json.value ?? null;
 }
 
 async function setItem(key: string, value: unknown): Promise<void> {
