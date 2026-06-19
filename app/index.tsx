@@ -33,7 +33,7 @@ import { colors, gradients, spacing, radius } from '../lib/theme';
 import { DatePickerModal } from '../components/DatePickerModal';
 
 // Bump this whenever a deploy goes out so we can verify which build each platform runs.
-const BUILD_VERSION = 'multi-ns-2026-06-13';
+const BUILD_VERSION = 'sevens-2026-06-19';
 
 function confirmReset(onConfirm: () => void) {
   if (Platform.OS === 'web') {
@@ -395,6 +395,17 @@ export default function HomeScreen() {
                 <Text style={styles.actionLabel}>Timeline</Text>
               </Pressable>
             </View>
+
+            {/* ── Seven Seven Seven reflection ─────────────────────────────── */}
+            <Pressable style={styles.sevensCard} onPress={() => router.push('/sevens')}>
+              <View style={styles.sevensTextWrap}>
+                <Text style={styles.sevensTitle}>7 · 7 · 7</Text>
+                <Text style={styles.sevensSub}>
+                  Map the people, places & behaviors that shape your life — then make one conscious shift.
+                </Text>
+              </View>
+              <Text style={styles.sevensArrow}>→</Text>
+            </Pressable>
           </>
         ) : null}
       </ScrollView>
@@ -548,6 +559,22 @@ const styles = StyleSheet.create({
   actionBtn: { flex: 1, backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.md, alignItems: 'center', borderWidth: 1, borderColor: colors.cardBorder },
   actionIcon: { fontSize: 24, marginBottom: spacing.xs },
   actionLabel: { color: colors.text, fontSize: 12, fontWeight: '600' },
+
+  sevensCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryDim,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+    padding: spacing.md,
+    marginTop: spacing.sm,
+    gap: spacing.md,
+  },
+  sevensTextWrap: { flex: 1 },
+  sevensTitle: { color: colors.primary, fontSize: 18, fontWeight: '800', letterSpacing: 1, marginBottom: 2 },
+  sevensSub: { color: colors.text, fontSize: 13, lineHeight: 18, opacity: 0.8 },
+  sevensArrow: { color: colors.primary, fontSize: 22, fontWeight: '700' },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   kvAvoid: { justifyContent: 'flex-end' },

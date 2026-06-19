@@ -51,3 +51,13 @@ export interface Supporter {
   phone: string;
   relationship: string;
 }
+
+// "Seven Seven Seven" reflection exercise — account-wide, not tied to a North Star.
+export interface SevenSevenSeven {
+  people: string[];     // up to 7 — the people who take up the most space in your mind
+  places: string[];     // up to 7 — where your life unfolds
+  behaviors: string[];  // up to 7 — what you consistently do
+  releaseItem: string;  // enlightened exchange — what to soften/let go
+  nourishItem: string;  // enlightened exchange — what nourishing thing to bring in
+  updatedAt: string;
+}

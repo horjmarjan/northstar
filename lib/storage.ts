@@ -1,4 +1,4 @@
-import { NorthStar, Milestone, Supporter, Goal } from './types';
+import { NorthStar, Milestone, Supporter, Goal, SevenSevenSeven } from './types';
 import { API } from './apiUrl';
 import { getToken } from './auth';
 
@@ -151,6 +151,14 @@ export async function getProfileImage(): Promise<string | null> {
 }
 export async function saveProfileImage(dataUri: string): Promise<void> {
   await setItem('northstar:profileImage', dataUri);
+}
+
+// "Seven Seven Seven" reflection — account-wide
+export async function getSevens(): Promise<SevenSevenSeven | null> {
+  return getItem<SevenSevenSeven>('northstar:sevens');
+}
+export async function saveSevens(data: SevenSevenSeven): Promise<void> {
+  await setItem('northstar:sevens', data);
 }
 
 // ─── Delete a North Star and its associated data ───────────────────────────
