@@ -32,6 +32,9 @@ import { NorthStar, Milestone } from '../lib/types';
 import { colors, gradients, spacing, radius } from '../lib/theme';
 import { DatePickerModal } from '../components/DatePickerModal';
 
+// Bump this whenever a deploy goes out so we can verify which build each platform runs.
+const BUILD_VERSION = 'multi-ns-2026-06-13';
+
 function confirmReset(onConfirm: () => void) {
   if (Platform.OS === 'web') {
     if (window.confirm('Reset this North Star? This will permanently delete this goal, its plan, and all progress. This cannot be undone.')) {
@@ -341,6 +344,9 @@ export default function HomeScreen() {
               <Pressable onPress={handleLogout} style={{ marginTop: 8 }}>
                 <Text style={[styles.resetText, { color: colors.muted }]}>Log out (@{getUsername()})</Text>
               </Pressable>
+              <Text style={[styles.resetText, { color: colors.muted, marginTop: 8, fontSize: 11 }]}>
+                build {BUILD_VERSION}
+              </Text>
             </View>
 
             {/* ── Focus Mode ──────────────────────────────────────────────── */}
