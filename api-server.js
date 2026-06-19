@@ -19,7 +19,7 @@ const app = express();
 app.use(express.json({ limit: '2mb' }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'northstar-dev-secret-change-in-prod';
-const MAX_USERS  = 10;
+const MAX_USERS  = 100;
 
 // ── Redis client ───────────────────────────────────────────────────────────
 const redis = new Redis({
