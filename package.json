@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "api": "node api-server.js",
-    "dev": "expo start"
+    "dev": "expo start",
+    "phone": "git pull origin main && expo start --tunnel --clear"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
