@@ -27,7 +27,7 @@ import {
   getGoalImage,
   saveGoalImage,
 } from '../lib/storage';
-import { isLoggedIn, restoreSession } from '../lib/auth';
+import { isLoggedIn, restoreSession, clearSession, getUsername } from '../lib/auth';
 import { NorthStar, Milestone } from '../lib/types';
 import { colors, gradients, spacing, radius } from '../lib/theme';
 import { DatePickerModal } from '../components/DatePickerModal';
@@ -228,6 +228,21 @@ export default function HomeScreen() {
     });
   };
 
+  const handleLogout = () => {
+    const doLogout = () => {
+      clearSession();
+      router.replace('/login');
+    };
+    if (typeof window !== 'undefined' && window.confirm) {
+      if (window.confirm(`Log out of @${getUsername()}?`)) doLogout();
+    } else {
+      Alert.alert('Log out', `Log out of @${getUsername()}?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Log out', style: 'destructive', onPress: doLogout },
+      ]);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -322,6 +337,9 @@ export default function HomeScreen() {
                 <Text style={styles.resetText}>
                   {allNorthStars.length > 1 ? 'Remove this North Star' : 'Reset North Star'}
                 </Text>
+              </Pressable>
+              <Pressable onPress={handleLogout} style={{ marginTop: 8 }}>
+                <Text style={[styles.resetText, { color: colors.muted }]}>Log out (@{getUsername()})</Text>
               </Pressable>
             </View>
 
