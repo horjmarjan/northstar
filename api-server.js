@@ -130,6 +130,36 @@ app.get('/api/storage/:key', requireAuth, async (req, res) => {
   res.json({ value });
 });
 
+// ── One-time recovery: merge orphaned old NS into the list ─────────────────
+app.post('/api/recover-old-ns', requireAuth, async (req, res) => {
+  const uid = req.user.id;
+  const [list, old] = await Promise.all([
+    getUserData(uid, 'northstar:list'),
+    getUserData(uid, 'northstar:goal'),
+  ]);
+  if (!old) return res.json({ status: 'no_old_ns' });
+  const currentList = list || [];
+  if (currentList.some(n => n.id === old.id)) return res.json({ status: 'already_in_list' });
+
+  const [oldMs, oldGs, oldSup, oldImg] = await Promise.all([
+    getUserData(uid, 'northstar:milestones'),
+    getUserData(uid, 'northstar:goals'),
+    getUserData(uid, 'northstar:supporters'),
+    getUserData(uid, 'northstar:goalImage'),
+  ]);
+
+  const merged = [old, ...currentList];
+  await Promise.all([
+    setUserData(uid, 'northstar:list', merged),
+    setUserData(uid, 'northstar:activeId', old.id),
+    oldMs  ? setUserData(uid, `northstar:milestones:${old.id}`, oldMs)  : Promise.resolve(),
+    oldGs  ? setUserData(uid, `northstar:goals:${old.id}`, oldGs)       : Promise.resolve(),
+    oldSup ? setUserData(uid, `northstar:supporters:${old.id}`, oldSup) : Promise.resolve(),
+    oldImg ? setUserData(uid, `northstar:goalImage:${old.id}`, oldImg)  : Promise.resolve(),
+  ]);
+  res.json({ status: 'recovered', goal: old.goal });
+});
+
 app.post('/api/storage/:key', requireAuth, async (req, res) => {
   await setUserData(req.user.id, req.params.key, req.body.value);
   res.json({ ok: true });

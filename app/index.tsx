@@ -27,13 +27,14 @@ import {
   getGoalImage,
   saveGoalImage,
 } from '../lib/storage';
-import { isLoggedIn, restoreSession, clearSession, getUsername } from '../lib/auth';
+import { isLoggedIn, restoreSession, clearSession, getUsername, getToken } from '../lib/auth';
+import { API } from '../lib/apiUrl';
 import { NorthStar, Milestone } from '../lib/types';
 import { colors, gradients, spacing, radius } from '../lib/theme';
 import { DatePickerModal } from '../components/DatePickerModal';
 
 // Bump this whenever a deploy goes out so we can verify which build each platform runs.
-const BUILD_VERSION = 'sevens-2026-06-19';
+const BUILD_VERSION = 'recovery-2026-06-20';
 
 function confirmReset(onConfirm: () => void) {
   if (Platform.OS === 'web') {
@@ -231,6 +232,27 @@ export default function HomeScreen() {
     });
   };
 
+  const handleRecoverOldNS = async () => {
+    try {
+      const token = getToken();
+      const res = await fetch(`${API}/api/recover-old-ns`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const json = await res.json();
+      if (json.status === 'recovered') {
+        Alert.alert('Recovered!', `"${json.goal}" has been restored. Reloading…`);
+        loadData();
+      } else if (json.status === 'already_in_list') {
+        Alert.alert('Already there', 'Your old North Star is already in your list.');
+      } else {
+        Alert.alert('Nothing found', 'No old North Star data was found to recover.');
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
+  };
+
   const handleLogout = () => {
     const doLogout = () => {
       clearSession();
@@ -340,6 +362,9 @@ export default function HomeScreen() {
                 <Text style={styles.resetText}>
                   {allNorthStars.length > 1 ? 'Remove this North Star' : 'Reset North Star'}
                 </Text>
+              </Pressable>
+              <Pressable onPress={handleRecoverOldNS} style={{ marginTop: 8 }}>
+                <Text style={[styles.resetText, { color: colors.blue }]}>Recover old North Star data</Text>
               </Pressable>
               <Pressable onPress={handleLogout} style={{ marginTop: 8 }}>
                 <Text style={[styles.resetText, { color: colors.muted }]}>Log out (@{getUsername()})</Text>
