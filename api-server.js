@@ -160,6 +160,19 @@ app.post('/api/recover-old-ns', requireAuth, async (req, res) => {
   res.json({ status: 'recovered', goal: old.goal });
 });
 
+// ── Debug: dump all storage keys for this user ─────────────────────────────
+app.get('/api/debug-storage', requireAuth, async (req, res) => {
+  const uid = req.user.id;
+  const keys = await redis.keys(`data:${uid}:*`);
+  const values = {};
+  for (const key of keys) {
+    const short = key.replace(`data:${uid}:`, '');
+    const raw = await redis.get(key);
+    try { values[short] = JSON.parse(raw); } catch { values[short] = raw; }
+  }
+  res.json({ userId: uid, keys: Object.keys(values), data: values });
+});
+
 app.post('/api/storage/:key', requireAuth, async (req, res) => {
   await setUserData(req.user.id, req.params.key, req.body.value);
   res.json({ ok: true });
