@@ -156,7 +156,7 @@ export default function MilestoneDetailScreen() {
         {/* Completion banner */}
         {isComplete && (
           <View style={styles.completeBanner}>
-            <Text style={styles.completeBannerText}>🎉 Mini-goal complete!</Text>
+            <Text style={styles.completeBannerText}>🎉 Inspired Action complete!</Text>
             <Text style={styles.completeBannerSub}>All tasks finished. Nice work.</Text>
           </View>
         )}
@@ -166,7 +166,7 @@ export default function MilestoneDetailScreen() {
           style={[styles.titleInput, isComplete && styles.titleInputDone]}
           value={titleDraft}
           onChangeText={v => { setTitleDraft(v); autoSave(v, notesDraft); }}
-          placeholder="Mini-goal title"
+          placeholder="Inspired action title"
           placeholderTextColor={colors.muted}
           multiline
           maxLength={200}

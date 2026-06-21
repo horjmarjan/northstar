@@ -195,17 +195,17 @@ app.post('/api/generate-plan', requireAuth, async (req, res) => {
     ? `North Star: "${goal}"
 Why: "${why}"
 
-The user already knows their key steps:
+The user already knows their inspired actions:
 ${miniGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
 
-For each key step, generate 2 concrete tasks. Keep all text short.
+For each inspired action, generate 2 concrete tasks. Keep all text short.
 
 Return ONLY this JSON:
 {"milestones":[{"title":"exact key step title","description":"one short sentence","tasks":[{"title":"short task"},{"title":"short task"}]}]}`
     : `North Star: "${goal}"
 Why: "${why}"
 
-Generate 4 key steps with 2 tasks each. Keep titles under 8 words, descriptions under 15 words, task titles under 10 words.
+Generate 4 inspired actions with 2 tasks each. Keep titles under 8 words, descriptions under 15 words, task titles under 10 words.
 
 Return ONLY this JSON:
 {"milestones":[{"title":"step title","description":"short description","tasks":[{"title":"task"},{"title":"task"}]}]}`;

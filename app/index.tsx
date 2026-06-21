@@ -34,7 +34,7 @@ import { colors, gradients, spacing, radius } from '../lib/theme';
 import { DatePickerModal } from '../components/DatePickerModal';
 
 // Bump this whenever a deploy goes out so we can verify which build each platform runs.
-const BUILD_VERSION = 'recovery-2026-06-20';
+const BUILD_VERSION = 'inspired-actions-2026-06-21';
 
 function confirmReset(onConfirm: () => void) {
   if (Platform.OS === 'web') {

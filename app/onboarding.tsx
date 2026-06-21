@@ -248,11 +248,11 @@ export default function OnboardingScreen() {
           </ScrollView>
         )}
 
-        {/* ── Step 3: Key Steps ── */}
+        {/* ── Step 3: Inspired Actions ── */}
         {step === 3 && (
           <ScrollView contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
             <Text style={styles.eyebrow}>STEP 3 OF 3</Text>
-            <Text style={styles.stepTitle}>Your first Key Steps</Text>
+            <Text style={styles.stepTitle}>Your Inspired Actions</Text>
             <Text style={styles.stepSub}>
               What are the big moves you'll need to make? These aren't tasks — they're the major chapters
               on your journey. Leave blank and AI will suggest them for you.
@@ -265,7 +265,7 @@ export default function OnboardingScreen() {
                   style={styles.keyStepInput}
                   value={val}
                   onChangeText={v => updateKeyStep(i, v)}
-                  placeholder={`Key step ${i + 1} (optional)`}
+                  placeholder={`Inspired action ${i + 1} (optional)`}
                   placeholderTextColor={colors.muted}
                   maxLength={100}
                   spellCheck
@@ -293,7 +293,7 @@ export default function OnboardingScreen() {
             </Pressable>
 
             <Text style={styles.aiNote}>
-              AI will turn your North Star and key steps into a structured plan with milestones and tasks.
+              AI will turn your North Star and inspired actions into a structured plan with milestones and tasks.
             </Text>
           </ScrollView>
         )}

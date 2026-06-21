@@ -142,9 +142,9 @@ export default function SetupScreen() {
           editable={!loading}
         />
 
-        {/* Mini Goals */}
+        {/* Inspired Actions */}
         <View style={styles.divider} />
-        <Text style={styles.sectionTitle}>Key Steps  <Text style={styles.optional}>(optional)</Text></Text>
+        <Text style={styles.sectionTitle}>Inspired Actions  <Text style={styles.optional}>(optional)</Text></Text>
         <Text style={styles.sectionSub}>
           What are the big things you need to accomplish to make this happen? Leave blank and we'll figure it out with AI.
         </Text>
@@ -158,7 +158,7 @@ export default function SetupScreen() {
               style={styles.miniGoalInput}
               value={mg}
               onChangeText={(v) => updateMiniGoal(i, v)}
-              placeholder={i === 0 ? 'e.g. Get my finances in order' : i === 1 ? 'e.g. Figure out business opportunity' : 'Another key step…'}
+              placeholder={i === 0 ? 'e.g. Get my finances in order' : i === 1 ? 'e.g. Figure out business opportunity' : 'Another inspired action…'}
               placeholderTextColor={colors.muted}
               editable={!loading}
               maxLength={120}
@@ -173,14 +173,14 @@ export default function SetupScreen() {
 
         {miniGoals.length < 8 && (
           <Pressable style={styles.addBtn} onPress={addMiniGoal} disabled={loading}>
-            <Text style={styles.addBtnText}>+ Add another step</Text>
+            <Text style={styles.addBtnText}>+ Add another inspired action</Text>
           </Pressable>
         )}
 
         {filledMiniGoals.length === 0 && (
           <View style={styles.aiNotice}>
             <Text style={styles.aiNoticeText}>
-              ✦  AI will generate your key steps and action plan automatically
+              ✦  AI will generate your inspired actions and plan automatically
             </Text>
           </View>
         )}
@@ -188,7 +188,7 @@ export default function SetupScreen() {
         {filledMiniGoals.length > 0 && (
           <View style={styles.aiNotice}>
             <Text style={styles.aiNoticeText}>
-              ✦  AI will build tasks for each of your {filledMiniGoals.length} key step{filledMiniGoals.length > 1 ? 's' : ''}
+              ✦  AI will build tasks for each of your {filledMiniGoals.length} inspired action{filledMiniGoals.length > 1 ? 's' : ''}
             </Text>
           </View>
         )}
