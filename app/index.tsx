@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
 import {
   getNorthStars,
@@ -34,7 +35,7 @@ import { colors, gradients, spacing, radius } from '../lib/theme';
 import { DatePickerModal } from '../components/DatePickerModal';
 
 // Bump this whenever a deploy goes out so we can verify which build each platform runs.
-const BUILD_VERSION = 'inspired-actions-2026-06-21';
+const BUILD_VERSION = 'edit-goal-image-2026-06-22';
 
 function confirmReset(onConfirm: () => void) {
   if (Platform.OS === 'web') {
@@ -253,6 +254,28 @@ export default function HomeScreen() {
     }
   };
 
+  const pickGoalImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow photo access to change your goal image.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+      base64: true,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const uri = asset.base64
+      ? `data:image/jpeg;base64,${asset.base64}`
+      : asset.uri;
+    setGoalImage(uri);
+    if (northStar) await saveGoalImage(northStar.id, uri);
+  };
+
   const handleLogout = () => {
     const doLogout = () => {
       clearSession();
@@ -326,7 +349,7 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.nsGoalRow}>
-                <View style={styles.goalImageContainer}>
+                <Pressable style={styles.goalImageContainer} onPress={pickGoalImage}>
                   {goalImage ? (
                     <Image source={{ uri: goalImage }} style={styles.goalImage} resizeMode="cover" />
                   ) : (
@@ -334,7 +357,10 @@ export default function HomeScreen() {
                       <Text style={styles.goalImagePlaceholderText}>✦</Text>
                     </View>
                   )}
-                </View>
+                  <View style={styles.goalImageEditBadge}>
+                    <Text style={styles.goalImageEditText}>✎</Text>
+                  </View>
+                </Pressable>
                 <View style={styles.nsGoalTextBlock}>
                   <Text style={styles.nsGoal}>{northStar.goal}</Text>
                   {!!northStar.why && <Text style={styles.nsWhy}>{northStar.why}</Text>}
@@ -548,6 +574,8 @@ const styles = StyleSheet.create({
   goalImage: { width: 72, height: 72 },
   goalImagePlaceholder: { width: 72, height: 72, backgroundColor: colors.primaryDim, alignItems: 'center', justifyContent: 'center' },
   goalImagePlaceholderText: { color: colors.primary, fontSize: 28 },
+  goalImageEditBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: colors.primary, width: 20, height: 20, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
+  goalImageEditText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   nsGoalTextBlock: { flex: 1 },
   nsGoal: { color: colors.text, fontSize: 22, fontWeight: '700', lineHeight: 30, marginBottom: 4 },
   nsWhy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
